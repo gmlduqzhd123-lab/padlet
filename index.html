@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src 'self' https://api.padlet.dev; object-src 'none'; base-uri 'none'; form-action 'none'"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src 'self' https://api.padlet.dev https://cdn.padlet.dev; object-src 'none'; base-uri 'none'; form-action 'none'"
     />
     <title>엽쌤의 패들렛 정리함</title>
     <link rel="stylesheet" href="./assets/css/app.css" />
@@ -16,7 +16,8 @@
   <body>
     <header>
       <div>
-        <b>엽쌤의 패들렛 정리함</b><span class="badge">로컬 가져오기 MVP</span>
+        <b>엽쌤의 패들렛 정리함</b
+        ><span id="modeBadge" class="badge">로컬 가져오기</span>
       </div>
       <p>
         자료는 이 탭의 메모리에서 처리합니다. 새로고침 전에 결과를 저장하세요.
@@ -34,27 +35,49 @@
             id="boardUrl"
             type="url"
             placeholder="https://padlet.com/…"
-          /><button id="diagnose">연결 가능성 진단</button>
+          /><button id="diagnose">주소 확인 · 연결 안내</button>
         </div>
         <pre id="diagnosis" aria-live="polite">
-API 자동 수집은 미검증입니다. 내보낸 파일로 바로 시작할 수 있습니다.</pre
+링크만으로 게시물을 읽지는 않습니다. 주소 확인 후 API 키로 연결하거나, 키 없이 내보낸 파일을 가져오세요.</pre
         >
-        <details>
-          <summary>공식 API 읽기 진단 · 고급 / 미검증</summary>
+        <a href="#import" id="localImportLink"
+          >API 키 없이 CSV / XLSX · 첨부 ZIP 가져오기</a
+        >
+        <details id="apiConnection">
+          <summary>API 키로 연결 · 게시물 읽기</summary>
           <p>
             유료 API 자격·보드 관리자 권한·브라우저 접근 허용이 각각 필요합니다.
-            이 단계는 자료 자동 수집을 완료하지 않습니다.
+            게시물 읽기와 첨부 파일 확보는 별도입니다. 실계정 검증 전 조건부
+            기능입니다.
           </p>
           <label for="apiKey">API 키 (세션 메모리만 사용)</label
           ><input id="apiKey" type="password" autocomplete="off" /><button
             id="apiBoard"
           >
-            보드 메타데이터 GET 진단</button
+            보드 연결 검사 (GET)</button
           ><label for="postId">첨부정보 진단용 게시물 ID</label
           ><input id="postId" /><button id="apiAttachment">
             첨부정보 GET 진단</button
           ><button id="clearKey" class="secondary">키 지우기</button
           ><button id="cancel" class="secondary">진단 중지</button>
+          <label for="boardId"
+            >보드 ID 직접 입력 (링크에서 ID를 해석하지 못한 경우)</label
+          >
+          <input id="boardId" maxlength="22" autocomplete="off" />
+          <button id="collectApi">공식 API로 게시물 가져오기 · 조건부</button>
+          <p>
+            첨부는 목록에서 원본 직접 파일·호스트를 확인한 항목만 별도
+            내려받습니다. 키는 첨부 요청에 전달하지 않습니다.
+          </p>
+          <button id="downloadRemote">
+            확인한 선택 첨부 내려받기 / 실패 항목 재시도
+          </button>
+          <button id="stopRemote" class="secondary">
+            API 읽기 / 내려받기 중지
+          </button>
+          <pre id="apiProgress" aria-live="polite">
+아직 API 요청을 보내지 않았습니다. 키 입력 후 연결 검사 또는 게시물 가져오기를 누르세요. 실계정 검증 기록은 아직 없습니다.</pre
+          >
         </details>
       </section>
       <section id="import">
@@ -92,6 +115,7 @@ API 자동 수집은 미검증입니다. 내보낸 파일로 바로 시작할 �
       <section>
         <h2>2. 자료 확인</h2>
         <p id="stats">내보내기 파일 기준 · 아직 가져온 자료가 없습니다.</p>
+        <pre id="coverage" aria-live="polite"></pre>
         <div class="row">
           <label>검색<input id="search" type="search" /></label
           ><label
@@ -158,7 +182,8 @@ API 자동 수집은 미검증입니다. 내보낸 파일로 바로 시작할 �
         >
       </section>
       <footer>
-        T-00 / T-01 · 자동 수집, 핵심 발췌, Codex 재창작은 후속 단계입니다.
+        T-00 / T-01 / T-02 · API 연결은 조건부·실계정 미검증입니다. 핵심 발췌와
+        Codex 재창작은 후속 단계입니다.
         <a href="./docs/FEASIBILITY.md">연결 검증 기록</a>
       </footer>
     </main>

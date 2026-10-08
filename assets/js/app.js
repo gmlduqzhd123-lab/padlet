@@ -9,6 +9,9 @@ import {
   writeFolder,
 } from "./export.js";
 import { safeUrl } from "./security.js";
+import { createApiClient } from "./api-client.js";
+import { collectBoard, collectAttachmentInfo } from "./api-collection.js";
+import { downloadAttachments, attachmentUrl } from "./attachment-download.js";
 const $ = (id) => document.getElementById(id);
 let table = null,
   project = null,
@@ -16,9 +19,150 @@ let table = null,
   active = null,
   controller = null,
   busy = false;
+let remoteUrls = new Map(),
+  approvedHosts = new Map();
+function installProject(next, nextAssets = []) {
+  project = next;
+  assets = nextAssets;
+  active = project.posts[0]?.id;
+  approvedHosts = new Map();
+  $("confirmSave").checked = false;
+  $("sectionFilter").replaceChildren(node("option", "모든 섹션"));
+  $("sectionFilter").firstChild.value = "";
+  for (const s of project.sections) {
+    const o = node("option", s.name || "섹션 없음");
+    o.value = s.id;
+    $("sectionFilter").append(o);
+  }
+  $("search").value = "";
+  $("typeFilter").value = "";
+  text("saveResult", "새 자료 가져옴 · 실제 저장 확인 0개");
+  render();
+}
+function apiProgress(progress) {
+  if (progress.phase === "waiting")
+    text(
+      "apiProgress",
+      `${progress.reason} · ${Math.ceil(progress.waitMs / 1000)}초 대기 · 중지 가능`,
+    );
+  else if (progress.phase === "board")
+    text(
+      "apiProgress",
+      `게시물 응답 ${progress.posts}개 읽음 · 아직 첨부 파일 저장 아님`,
+    );
+  else
+    text(
+      "apiProgress",
+      `${progress.id || ""} · ${progress.status || "받은 바이트 " + (progress.bytes ?? 0)}`,
+    );
+}
+function setRemoteBusy(value) {
+  busy = value;
+  for (const id of [
+    "collectApi",
+    "downloadRemote",
+    "apiBoard",
+    "apiAttachment",
+    "saveZip",
+  ])
+    $(id).disabled = value;
+  $("importButton").disabled = value || !table;
+  capabilities();
+  if (value) $("saveFolder").disabled = true;
+  $("dataFile").disabled = value;
+}
+async function importApi() {
+  if (busy) return;
+  if (!requireApiKey()) return;
+  let key = $("apiKey").value;
+  let partial = null;
+  const candidates = new Map();
+  controller = new AbortController();
+  const signal = controller.signal;
+  setRemoteBusy(true);
+  $("apiKey").value = "";
+  try {
+    const id =
+      $("boardId").value.trim() || parseBoardUrl($("boardUrl").value).id;
+    const request = createApiClient(key, { signal, onProgress: apiProgress });
+    const next = await collectBoard(id, request, {
+      signal,
+      onProgress: apiProgress,
+      onPartial: (p) => (partial = p),
+    });
+    await collectAttachmentInfo(next, request, candidates, {
+      signal,
+      onProgress: apiProgress,
+    });
+    remoteUrls = candidates;
+    installProject(next);
+    text(
+      "diagnosis",
+      `현재 출처에서 API 게시물 응답 읽음 · ${next.posts.length}개\n범위: 가져온 API 응답 기준 (${next.coverage.status})\n첨부 파일 확보와 실제 저장은 아래 결과에서 별도로 확인하세요.`,
+    );
+    text(
+      "apiProgress",
+      `${signal.aborted ? "중지: 확보한 본문 보존" : "가져온 API 응답 기준"} · 게시물 ${next.posts.length}개\n첨부정보 읽기와 파일 바이트 확보/저장은 별도입니다.\n${next.coverage.warnings.join("\n")}`,
+    );
+  } catch (error) {
+    text(
+      "diagnosis",
+      signal.aborted
+        ? "API 읽기 중지 · 확보 범위는 아래 자료 확인 참조"
+        : "API 가져오기 중단 · " +
+            error.message +
+            "\n키 없이 내보낸 파일로 계속할 수 있습니다.",
+    );
+    if (partial) {
+      partial.coverage.status = "partial";
+      partial.coverage.warnings.push("처리 중단: 확보한 본문만 보존");
+      remoteUrls = new Map();
+      installProject(partial);
+      text("apiProgress", "부분 응답 본문 보존 · 첨부 수동 확인 필요");
+    } else
+      text(
+        "apiProgress",
+        signal.aborted
+          ? "API 읽기 취소 · 기존 자료 유지"
+          : error.message + "\n로컬 내보내기 파일로 계속할 수 있습니다.",
+      );
+  } finally {
+    key = "";
+    controller = null;
+    setRemoteBusy(false);
+  }
+}
+$("collectApi").onclick = importApi;
+$("stopRemote").onclick = () => controller?.abort();
+$("downloadRemote").onclick = async () => {
+  if (busy) return;
+  if (!project || !approvedHosts.size) {
+    text(
+      "apiProgress",
+      "목록 상세에서 직접 원본 파일·호스트를 먼저 확인하세요.",
+    );
+    return;
+  }
+  controller = new AbortController();
+  setRemoteBusy(true);
+  try {
+    await downloadAttachments(project, assets, remoteUrls, approvedHosts, {
+      signal: controller.signal,
+      onProgress: apiProgress,
+    });
+    render();
+    text(
+      "apiProgress",
+      `파일 바이트 확보 완료/부분 처리 · 확보 ${summary(project, assets).uniqueAssets}개 · 미확보 ${summary(project, assets).unresolved}개\n아직 폴더 저장 또는 ZIP 생성 전입니다.`,
+    );
+  } finally {
+    controller = null;
+    setRemoteBusy(false);
+  }
+};
 $("dataFile").disabled = true;
 startWorker(() => {
-  $("dataFile").disabled = false;
+  $("dataFile").disabled = busy;
 });
 const text = (id, s) => ($(id).textContent = s);
 const node = (tag, s) => {
@@ -40,6 +184,16 @@ function capabilities() {
   );
 }
 capabilities();
+function requireApiKey() {
+  if ($("apiKey").value.trim()) return true;
+  $("apiConnection").open = true;
+  text(
+    "diagnosis",
+    "API 연결 검사 안 함 · API 키가 입력되지 않았습니다.\n아래 키 입력 후 ‘보드 연결 검사’ 또는 ‘게시물 가져오기’를 누르세요.\n키가 없다면 ‘API 키 없이 CSV / XLSX · 첨부 ZIP 가져오기’를 이용하세요.",
+  );
+  $("apiKey").focus();
+  return false;
+}
 $("diagnose").onclick = () => {
   try {
     const b = parseBoardUrl($("boardUrl").value);
@@ -49,23 +203,29 @@ $("diagnose").onclick = () => {
         (b.id
           ? "보드 ID 후보: " + b.id
           : "보드 ID 미확정: 패들렛 Developer 메뉴에서 확인 필요") +
-        "\nAPI 자격: 미검증\n관리자 권한: 미검증\nPages CORS: 미검증\n첨부 바이트: 미검증\n폴더: " +
-        (window.showDirectoryPicker ? "지원 감지" : "ZIP 대체"),
+        "\n주소 형식만 확인했습니다. 이 버튼은 API 요청을 보내지 않습니다.\n" +
+        ($("apiKey").value.trim()
+          ? "키 입력됨 · 아래 ‘보드 연결 검사’ 또는 ‘게시물 가져오기’를 누르세요."
+          : "API 연결 검사 안 함 · API 키가 필요합니다. 키 없이 쓰려면 내보낸 파일을 가져오세요.") +
+        "\n첨부 파일 확보·실제 저장: 아직 수행하지 않음",
     );
+    $("apiConnection").open = true;
+    $(b.id ? "apiKey" : "boardId").focus();
   } catch (e) {
     text("diagnosis", e.message);
   }
 };
 async function diagnoseApi(type) {
   if (busy) return;
-  busy = true;
+  if (!requireApiKey()) return;
+  setRemoteBusy(true);
   controller = new AbortController();
   let key = $("apiKey").value;
   $("apiKey").value = "";
   try {
     const id =
       type === "board"
-        ? parseBoardUrl($("boardUrl").value).id
+        ? $("boardId").value.trim() || parseBoardUrl($("boardUrl").value).id
         : $("postId").value.trim();
     const j = await (type === "board" ? readBoard : readAttachment)(id, key, {
       signal: controller.signal,
@@ -75,14 +235,24 @@ async function diagnoseApi(type) {
       (type === "board" ? "보드" : "첨부정보") +
         " GET 응답 읽기 성공 · HTTP 200\n" +
         (j.data ? "data 필드 있음" : "data 필드 없음: 스키마 확인 필요") +
-        "\n이 출처의 이번 진단 결과입니다. Pages 접근·첨부 바이트·저장은 별도 미검증이며 자동 수집은 아직 구현하지 않았습니다.",
+        "\n현재 출처에서 이번 요청의 응답을 읽었습니다. 다른 보드·계정·출처의 연결은 확인하지 않았습니다.\n" +
+        (type === "board"
+          ? "게시물 정리는 키를 다시 입력한 후 ‘공식 API로 게시물 가져오기’를 누르세요.\n"
+          : "") +
+        "첨부 파일 바이트 확보·실제 저장: 이 검사에서는 수행하지 않음",
     );
   } catch (e) {
-    text("diagnosis", e.message + "\n내보낸 파일로 시작할 수 있습니다.");
+    text(
+      "diagnosis",
+      (controller.signal.aborted
+        ? "API 연결 검사 중지"
+        : "API 연결 검사 실패 · " + e.message) +
+        "\n키 없이 내보낸 파일로 계속할 수 있습니다.",
+    );
   } finally {
     key = "";
-    busy = false;
     controller = null;
+    setRemoteBusy(false);
   }
 }
 $("apiBoard").onclick = () => diagnoseApi("board");
@@ -123,8 +293,10 @@ function mapping() {
   $("importButton").disabled = false;
 }
 $("dataFile").onchange = async () => {
+  if (busy) return;
   const file = $("dataFile").files[0];
   if (!file) return;
+  setRemoteBusy(true);
   try {
     const next = await localTask("readTable", file, $("encoding").value);
     table = next;
@@ -144,14 +316,17 @@ $("dataFile").onchange = async () => {
     table = null;
     $("importButton").disabled = true;
     announce(e);
+  } finally {
+    setRemoteBusy(false);
   }
 };
 $("encoding").onchange = () => $("dataFile").onchange();
 $("sheet").onchange = mapping;
 $("importButton").onclick = async () => {
+  if (busy) return;
   if (!table) return;
   const button = $("importButton");
-  button.disabled = true;
+  setRemoteBusy(true);
   try {
     const nextAssets = await localTask("readAssets", [
       ...$("attachments").files,
@@ -161,6 +336,8 @@ $("importButton").onclick = async () => {
     );
     const next = normalize(table, Number($("sheet").value), map, nextAssets);
     assets = nextAssets;
+    remoteUrls = new Map();
+    approvedHosts = new Map();
     project = next;
     active = project.posts[0]?.id;
     $("confirmSave").checked = false;
@@ -180,7 +357,7 @@ $("importButton").onclick = async () => {
   } catch (e) {
     announce(e);
   } finally {
-    button.disabled = false;
+    setRemoteBusy(false);
   }
 };
 function options() {
@@ -188,10 +365,29 @@ function options() {
 }
 function render() {
   if (!project) return;
+  const basis =
+    project.coverage.basis === "api-response"
+      ? "가져온 API 응답 기준"
+      : "내보내기 파일 기준";
+  text(
+    "modeBadge",
+    project.sourceMode === "api"
+      ? "공식 API · 조건부"
+      : project.sourceMode === "mixed"
+        ? "혼합 처리"
+        : "로컬 가져오기",
+  );
+  text(
+    "coverage",
+    project.coverage.warnings.join("\n") +
+      (project.coverage.missingPostIds?.length
+        ? "\n누락 게시물 ID: " + project.coverage.missingPostIds.join(", ")
+        : ""),
+  );
   const stats = summary(project, assets);
   text(
     "stats",
-    `내보내기 파일 기준 · 가져옴 ${stats.postsObserved} · 선택 ${stats.postsSelected} · 본문 ${stats.textProcessed} · 첨부 참조 ${stats.attachmentReferences} · 서로 다른 확보 파일 ${stats.uniqueAssets} · 링크만 ${stats.externalLinks} · 미확보 ${stats.unresolved}`,
+    `${basis} · 가져옴 ${stats.postsObserved} · 선택 ${stats.postsSelected} · 본문 ${stats.textProcessed} · 첨부 참조 ${stats.attachmentReferences} · 서로 다른 확보 파일 ${stats.uniqueAssets} · 링크만 ${stats.externalLinks} · 미확보 ${stats.unresolved}`,
   );
   text(
     "unlinked",
@@ -284,6 +480,33 @@ function renderDetail() {
   for (const a of project.attachments.filter((x) => x.postIds.includes(p.id))) {
     const d = node("div");
     d.className = "attachment";
+    if (a.failure) d.append(node("p", a.failure.message));
+    if (remoteUrls.has(a.id) && !a.assetId && a.status !== "linked_only") {
+      const candidate = remoteUrls.get(a.id);
+      const host = new URL(candidate).hostname;
+      const label = node("label"),
+        confirm = node("input");
+      confirm.type = "checkbox";
+      confirm.checked = approvedHosts.has(a.id);
+      confirm.setAttribute("aria-label", a.id + " 직접 원본/호스트 확인");
+      try {
+        attachmentUrl(candidate, new Set([host]));
+      } catch {
+        confirm.disabled = true;
+      }
+      confirm.onchange = () => {
+        if (confirm.checked) approvedHosts.set(a.id, host);
+        else approvedHosts.delete(a.id);
+        $("confirmSave").checked = false;
+      };
+      label.append(
+        confirm,
+        document.createTextNode(
+          ` 직접 원본 파일과 호스트 ${host}를 확인했습니다${confirm.disabled ? " (현재 미지원 호스트/형식: 수동 확보 필요)" : ""}`,
+        ),
+      );
+      d.append(label);
+    }
     d.append(
       node(
         "p",

@@ -31,6 +31,10 @@ export function summary(p, assets, records = []) {
   };
 }
 export function documents(p, assets, options = {}) {
+  const basis =
+    p.coverage.basis === "api-response"
+      ? "가져온 API 응답 기준"
+      : "내보내기 파일 기준";
   const files = new Map(),
     posts = p.posts.filter((x) => x.selected),
     refs = p.attachments.filter((a) =>
@@ -80,7 +84,9 @@ export function documents(p, assets, options = {}) {
   }
   add(
     "02_줄글정리/글_읽기.html",
-    '<!doctype html><html lang="ko"><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>글 읽기</title><style>body{font:16px/1.7 system-ui;max-width:900px;margin:40px auto;padding:20px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style><h1>글 모음 · 내보내기 파일 기준</h1><pre>' +
+    '<!doctype html><html lang="ko"><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>글 읽기</title><style>body{font:16px/1.7 system-ui;max-width:900px;margin:40px auto;padding:20px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style><h1>글 모음 · ' +
+      basis +
+      "</h1><pre>" +
       escapeHtml(all) +
       "</pre></html>",
   );
@@ -138,7 +144,7 @@ export function documents(p, assets, options = {}) {
           a.id,
           a.postIds.join(";"),
           a.reference,
-          a.match.status,
+          a.status + " / " + a.match.status,
           "원본에서 파일 확보 후 수동 연결",
         ]),
     ]),
@@ -163,7 +169,8 @@ export function documents(p, assets, options = {}) {
   }
   add(
     "00_안내와목록/읽어주세요.txt",
-    "내보내기 파일 기준이며 전체 보드 수집은 미확인입니다. 원문/정리본/첨부/미확보 목록을 구분합니다. ZIP packed는 ZIP 포함 확인이며 디스크 저장 확인이 아닙니다. HTML·SVG·스크립트·실행파일 첨부는 보관만 하며 앱에서 실행하지 않았습니다.",
+    basis +
+      "이며 전체 보드 수집은 미확인입니다. 원문/정리본/첨부/미확보 목록을 구분합니다. ZIP packed는 ZIP 포함 확인이며 디스크 저장 확인이 아닙니다. HTML·SVG·스크립트·실행파일 첨부는 보관만 하며 앱에서 실행하지 않았습니다.",
   );
   return files;
 }
@@ -173,7 +180,8 @@ export function finalize(p, assets, files, records, mode) {
     utf8(
       JSON.stringify(
         {
-          basis: "export-file",
+          basis: p.coverage.basis,
+          coverage: p.coverage,
           mode,
           writeFailures: records.filter((r) => r.status === "failed").length,
           ...summary(p, assets, records),
@@ -191,7 +199,7 @@ export function finalize(p, assets, files, records, mode) {
           schemaVersion: "1.0",
           projectId: p.projectId,
           mode,
-          scope: "export-file",
+          scope: p.coverage.basis,
           diskConfirmed:
             mode === "folder" && records.every((r) => r.status === "saved"),
           records,

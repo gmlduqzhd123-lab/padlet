@@ -1,5 +1,9 @@
 # 완료 검수표
 
+2026-10-09 연결 안내 회귀: 주소 확인/키 미입력 시 원격 요청 0, API 패널 펼침·키 포커스, 실제 요청 후 현재 출처 한정 성공 또는 공급자 오류 표시를 가상 API로 검수했다. 27개 API mock/39개 로컬 PASS. 실제 연결은 NOT_RUN. [기록](docs/CONNECTION_UX_REPORT.md).
+
+T-02 후속 구현/검수는 [docs/T02_REPORT.md](docs/T02_REPORT.md)를 참고한다. 로컬 39개와 API 가상 24개 통과를 실제 패들렛 계정/호스트 검증으로 해석하지 않는다. AC-19는 NOT_RUN이다.
+
 2026-10-08 T-00/T-01 실행 기록은 [docs/TEST_REPORT.md](docs/TEST_REPORT.md)와 [docs/FEASIBILITY.md](docs/FEASIBILITY.md)를 참고한다. 아래 표는 기대 기준이며 전체 PASS 선언이 아니다. 실제 Pages/API/OS 폴더 검수는 NOT_RUN이고 mock 결과와 구분한다.
 
 ## 기록 규칙

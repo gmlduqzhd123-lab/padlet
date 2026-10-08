@@ -20,6 +20,8 @@ const messages = {
   NOT_ADMIN: "보드 관리자 권한이 없습니다.",
   NOT_PAYING_USER: "현재 계정에서 API 이용 자격이 확인되지 않습니다.",
   PADLET_ARCHIVED: "보관된 보드입니다.",
+  RATE_LIMIT_EXCEEDED: "요청량 제한으로 대기가 필요합니다.",
+  NOT_FOUND: "요청한 보드 또는 게시물이 없습니다.",
 };
 export async function requestApi(path, key, { fetcher = fetch, signal } = {}) {
   if (!key) throw Error("키 없음: 로컬 파일 가져오기를 이용할 수 있습니다.");
@@ -41,7 +43,7 @@ export async function requestApi(path, key, { fetcher = fetch, signal } = {}) {
       signal,
     });
   } catch (e) {
-    if (e.name === "AbortError") throw Error("진단 취소");
+    if (e.name === "AbortError") throw e;
     throw Error(
       "네트워크 또는 브라우저 접근 제한: 원인 미확정. CORS 여부를 단정할 수 없습니다.",
     );
@@ -50,17 +52,22 @@ export async function requestApi(path, key, { fetcher = fetch, signal } = {}) {
   try {
     j = await r.json();
   } catch {
-    throw Error("API JSON 응답을 읽지 못했습니다.");
+    if (r.ok) throw Error("API JSON 응답을 읽지 못했습니다.");
+    j = { errors: [] };
   }
   if (!r.ok) {
     const code = j.errors?.[0]?.code;
-    throw Error(
+    const error = Error(
       (messages[code] || "공식 API 응답 오류") +
         " · " +
         (messages[code] ? code : "알 수 없는 코드") +
         " · HTTP " +
         r.status,
     );
+    error.httpStatus = r.status;
+    error.providerCode = messages[code] ? code : null;
+    error.retryAfter = r.headers?.get("Retry-After") || null;
+    throw error;
   }
   return j;
 }

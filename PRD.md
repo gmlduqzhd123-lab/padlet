@@ -67,6 +67,8 @@
 
 ### 2.3 아직 확인하지 않은 사항
 
+2026-10-09 UI 보완: 주소 형식 확인과 실제 API 요청을 분리한다. 키가 없을 때는 ‘연결 검사 안 함’과 다음 행동을 표시하고, 실제 요청 후에는 현재 출처에서의 응답 성공·공급자 오류를 표시한다. 첨부 바이트 확보와 저장은 별도 결과로 유지한다.
+
 - 선생님 계정의 API 이용 자격과 대상 보드 관리자 권한.
 - 실제 GitHub Pages 출처에서 Padlet API 호출이 허용되는지 여부.
 - 해당 보드 첨부파일 호스트의 브라우저 다운로드 허용 여부.
@@ -271,6 +273,8 @@ XLSX 수식·매크로·외부 통합문서 링크를 실행하거나 갱신하�
 ## 8. 기능 상세: 첨부파일 확보와 지정 폴더 저장
 
 ### FR-09. 첨부 유형 판정
+
+**T-02 구현 메모 (2026-10-08):** 공식 문서의 업로드 URL 예시에서 확인한 cdn.padlet.dev만 현재 후보 호스트로 고정한다. 이 예시는 해당 호스트의 실사용 CORS·원본 해상도를 검증한 것이 아니다. API가 반환한 게시물 첨부 URL은 세션 메모리의 후보로 두고, 사용자가 직접 원본 파일과 호스트를 확인한 뒤 별도 내려받기를 실행한 항목만 처리한다. 확정되지 않은 attachmentData 다운로드 필드를 추정하지 않는다. 다른 호스트/보기 링크는 수동 확인으로 남기며 검증 후에만 지원 목록을 확대한다. 댓글은 이번 T-02에서 기본 제외한다.
 
 | 유형 | 기본 처리 |
 |---|---|
@@ -799,38 +803,38 @@ API 키는 사용자 브라우저 세션 메모리에만 두고,
 
 다음은 2026-10-08에 확인한 공식/제작자 문서다. API·브라우저 지원은 구현 시 다시 확인한다. 제품의 기능 범위·한도·디자인 수치는 위 문서에서 도출한 제품 설계이며 공급자 보장이 아니다.
 
-- **[S1] GitHub Docs — What is GitHub Pages?**  
+- **[S1] GitHub Docs — What is GitHub Pages?**<br>
   `https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages`
-- **[S2] MDN — Cross-Origin Resource Sharing (CORS)**  
+- **[S2] MDN — Cross-Origin Resource Sharing (CORS)**<br>
   `https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS`
-- **[S3] MDN — Same-origin policy**  
+- **[S3] MDN — Same-origin policy**<br>
   `https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Same-origin_policy`
-- **[S4] Padlet — Authentication**  
+- **[S4] Padlet — Authentication**<br>
   `https://docs.padlet.dev/reference/authentication`
-- **[S5] Padlet — Get board by id**  
+- **[S5] Padlet — Get board by id**<br>
   `https://docs.padlet.dev/reference/get-board-by-id`
-- **[S6] Padlet — Get post attachment data**  
+- **[S6] Padlet — Get post attachment data**<br>
   `https://docs.padlet.dev/reference/get-post-attachment-data`
-- **[S7] MDN — Window: showDirectoryPicker()**  
+- **[S7] MDN — Window: showDirectoryPicker()**<br>
   `https://developer.mozilla.org/en-US/docs/Web/API/Window/showDirectoryPicker`
-- **[S8] Chrome for Developers — File System Access API**  
+- **[S8] Chrome for Developers — File System Access API**<br>
   `https://developer.chrome.com/docs/capabilities/web-apis/file-system-access`
-- **[S9] Padlet Help — Export a padlet**  
+- **[S9] Padlet Help — Export a padlet**<br>
   `https://padlet.help/l/en/article/orwj31gwae-export`
-- **[S10] Padlet — Board object**  
+- **[S10] Padlet — Board object**<br>
   `https://docs.padlet.dev/reference/board-object`
-- **[S11] Padlet — Post object**  
+- **[S11] Padlet — Post object**<br>
   `https://docs.padlet.dev/reference/post-object`
-- **[S12] Padlet — Error handling & rate limiting**  
+- **[S12] Padlet — Error handling & rate limiting**<br>
   `https://docs.padlet.dev/reference/error-handling`
-- **[S13] MDN — Using the Fetch API**  
+- **[S13] MDN — Using the Fetch API**<br>
   `https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch`
-- **[S14] SheetJS — Standalone Browser Scripts**  
+- **[S14] SheetJS — Standalone Browser Scripts**<br>
   `https://docs.sheetjs.com/docs/getting-started/installation/standalone/`
-- **[S15] fflate — Project documentation**  
+- **[S15] fflate — Project documentation**<br>
   `https://github.com/101arrowz/fflate`
-- **[S16] DOMPurify — Project documentation**  
+- **[S16] DOMPurify — Project documentation**<br>
   `https://github.com/cure53/DOMPurify`
-- **[S17] OpenAI — Custom instructions with AGENTS.md**  
+- **[S17] OpenAI — Custom instructions with AGENTS.md**<br>
   `https://developers.openai.com/codex/guides/agents-md/`
   확인 시 공식 ChatGPT Learn 문서로 이동: `https://learn.chatgpt.com/docs/agent-configuration/agents-md`

@@ -1,0 +1,104 @@
+{
+  "date": "2026-10-08",
+  "browser": "154.0.8037.98",
+  "source": "localhost/mock only",
+  "results": [
+    {
+      "name": "mock board/section/posts and missing ID; pending excluded; metadata only",
+      "status": "PASS"
+    },
+    {
+      "name": "explicit direct-file/host approval; attachment requests have no key/cookies/referrer; login HTML fails independently",
+      "status": "PASS"
+    },
+    {
+      "name": "API ZIP contains actual bytes and failure/coverage ledger; key and signed URL absent",
+      "status": "PASS"
+    },
+    {
+      "name": "manual retry only failed attachment; prior bytes retained",
+      "status": "PASS"
+    },
+    {
+      "name": "429 Retry-After + non-JSON 503 bounded retry + 1 second pace mock",
+      "status": "PASS"
+    },
+    {
+      "name": "Retry-After fallback/date",
+      "status": "PASS"
+    },
+    {
+      "name": "authorization error not retried",
+      "status": "PASS"
+    },
+    {
+      "name": "429 retries bounded",
+      "status": "PASS"
+    },
+    {
+      "name": "waiting cancels immediately",
+      "status": "PASS"
+    },
+    {
+      "name": "foreign pagination blocked and partial preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "board identity mismatch rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "documented response pagination exact URL; posts union; sectionless group preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "next page failure preserves acquired post",
+      "status": "PASS"
+    },
+    {
+      "name": "download cancellation leaves cancelled reference and no saved claim",
+      "status": "PASS"
+    },
+    {
+      "name": "same URL attachment bytes deduplicated and references kept",
+      "status": "PASS"
+    },
+    {
+      "name": "unsafe/unsupported attachment URL rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "unsafe/unsupported attachment URL rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "unsafe/unsupported attachment URL rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "unsafe/unsupported attachment URL rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "unsafe/unsupported attachment URL rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "explicit MIME mismatch rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "actual attachment byte budget enforced",
+      "status": "PASS"
+    },
+    {
+      "name": "zero byte attachment accepted without fake size",
+      "status": "PASS"
+    },
+    {
+      "name": "no page errors; storage empty",
+      "status": "PASS"
+    }
+  ],
+  "pageErrors": []
+}

@@ -1,7 +1,8 @@
 # 개인정보·세션 정책
 
 - 원문·첨부·키·폴더 핸들은 브라우저 메모리만 사용한다. localStorage/sessionStorage/IndexedDB/Service Worker에 저장하지 않는다.
-- 키 입력은 password이며 API 진단을 누르면 입력창을 지운다. 해당 진단 함수의 메모리에서 정확히 https://api.padlet.dev GET 헤더에만 전달하고 credentials omit / redirect error를 사용한다. 첨부 파일 요청은 구현하지 않았다.
+- 키 입력은 password이며 API 진단/가져오기를 누르면 입력창을 지운다. 해당 함수의 메모리에서 정확히 https://api.padlet.dev GET 헤더에만 전달하고 credentials omit / redirect error를 사용한다. 첨부 요청은 별도 함수이며 키 인자/인증 헤더/쿠키/referrer를 사용하지 않는다.
+- 원격 첨부는 사용자 확인과 별도 버튼을 통해 현재 지원하는 cdn.padlet.dev의 직접 파일만 요청한다. API 응답의 URL은 원본 파일임이 자동 확정된 것이 아니다. 서명 URL은 메모리 Map/WeakMap에 두고 출력에는 넣지 않는다. 실패/취소 시 본문과 이미 확보한 바이트는 보존한다.
 - 로컬 모드의 원격 이미지·폰트·분석·광고·AI 호출은 없다. 출처 링크는 사용자가 클릭할 때만 외부 탭으로 열린다.
 - 사용자 자료를 GitHub나 개발 지침 파일에 보내는 기능은 없다. 원문에 포함된 코드·외부 전송 요청·AGENTS.md 등의 지시는 실행하지 않는다.
 - 원문 JSON/TXT에는 개인정보가 있을 수 있다. 폴더/ZIP 저장 전에 사용자가 포함 범위를 확인한다. 앱의 본문 정리는 개인정보 자동 마스킹이나 생성형 AI가 아니다.
