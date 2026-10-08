@@ -1,5 +1,15 @@
 # T-02 첨부정보·연결 흐름 수정 검수
 
+## 후속 배포 검수 (2026-10-09)
+
+사용자의 별도 ‘배포해’ 요청으로 앱 커밋 a7ffd3e1ca6b4b7b893fcc65fcebbd91a6cf47fc를 기존 main 이력을 이어 일반 push했다. [Pages 작업](https://github.com/gmlduqzhd123-lab/padlet/actions/runs/37856568082)은 completed/success이며 공개 주소 https://gmlduqzhd123-lab.github.io/padlet/ 에 새 버전이 반영됐다. 아래 ‘미배포/시험 미실행’ 표현은 배포 요청 전 기록이다.
+
+이번에 `node tests/pages.cjs`를 직접 실행했다. **공개 출처 시험 5 PASS / 0 FAIL**, 스크립트 오류/자산 요청 실패/로컬 자료 처리 원격 요청 0. HTTP 200·새 게시물 가져오기 버튼·Worker 로드, 최초 키 안내와 키 없는 요청 0, 가상 CSV/XLSX 각 100개·첨부 ZIP 가져오기·원문 보존·미확보 표시, ZIP 다운로드 및 독립 압축 해제를 확인했다. 결과는 T02_FIX_PAGES_RESULTS.json에 기록했다. 이전의 로컬 39개/API mock 47개 PASS와 별도 검수다.
+
+신규 배포에는 앱 소스·검수 문서·가상 시험 코드만 포함했고 사용자 원문/학생자료/실제 키와 새 test-results ZIP·이미지는 추가하지 않았다. 강제 push를 사용하지 않았다. **실제 API 자격·승인된 보드·Pages 인증 API/첨부 CORS·원본 동일성·OS 폴더 사용자 승인은 여전히 NOT_RUN/UNVERIFIED다.** 공개 파일 가져오기 성공을 실제 패들렛 API 수집 성공으로 표시하지 않는다.
+
+현재 사용: 공개 주소에서 링크 → ‘게시물 가져오기’ → 최초 키 입력 후 같은 버튼 → 자료 선택·후보 파일 확보 → 글 정리 → 폴더/ZIP 저장. 키 없는 사용은 CSV/XLSX·첨부 ZIP 경로로 시작한다. 이전 화면이 보이면 Ctrl+F5로 새로고침한다.
+
 검수일: 2026-10-09 (Asia/Seoul). 기존 앱을 유지하며 수정했다. 지정한 다음 작업 문서와 AGENTS.md/PRD.md/TASKS.md/ACCEPTANCE.md를 읽었다. **이번 작업에서 커밋·원격 푸시·배포를 수행하지 않았다.** 공개 앱은 이전 배포본이다. 핵심 발췌·재창작 신규 기능은 추가하지 않았다.
 
 ## 확인한 기존 문제

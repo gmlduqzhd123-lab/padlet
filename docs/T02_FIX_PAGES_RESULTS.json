@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-09",
+  "url": "https://gmlduqzhd123-lab.github.io/padlet/",
+  "browser": "154.0.8037.98",
+  "results": [
+    {
+      "name": "live Pages HTTP 200, new version and Worker ready",
+      "status": "PASS"
+    },
+    {
+      "name": "live no-key guidance and zero remote data requests",
+      "status": "PASS"
+    },
+    {
+      "name": "live fictional 가상100.csv import with attachment/missing ledger",
+      "status": "PASS"
+    },
+    {
+      "name": "live fictional 가상100.xlsx import with attachment/missing ledger",
+      "status": "PASS"
+    },
+    {
+      "name": "live ZIP downloaded and independently decompressed; no disk-saved claim, page errors or data requests",
+      "status": "PASS"
+    }
+  ],
+  "pageErrors": [],
+  "failedRequests": [],
+  "realPadletApi": "NOT_RUN",
+  "realFolderPicker": "NOT_RUN"
+}

@@ -1,5 +1,7 @@
 # 구현 작업 목록
 
+2026-10-09 T-02 수정본 후속 배포 완료: a7ffd3e main 반영, Pages completed/success, 공개 출처 가상 회귀 5개 PASS. 최신 기록 docs/T02_FIX_REPORT.md. 이전 미배포 표현은 당시 기록이며 실제 인증 API 검증은 계속 NOT_RUN이다.
+
 2026-10-09 사용자 배포 요청 수행: 원격 main 기록을 이어 커밋 6ce5de5 전송, Pages build/deploy 성공, 공개 출처 가상 시험 5개 PASS. 이후 문서 배포 전 표현은 당시 기록이다. docs/DEPLOYMENT_REPORT.md 참조. 실제 API 인증·첨부 시험은 NOT_RUN이다.
 
 2026-10-09 연결 안내 수정 완료: 주소 확인과 API 검사를 분리하고 키 없는 경우 안내/로컬 이동을 제공한다. API mock 27개·로컬 39개 PASS, 공개 반영 및 실제 인증 API 시험은 미수행. docs/CONNECTION_UX_REPORT.md 참조.

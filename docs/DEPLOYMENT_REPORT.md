@@ -1,5 +1,7 @@
 # GitHub Pages 배포 검수 · 2026-10-09
 
+최신 배포: 사용자 후속 요청에 따라 T-02 첨부정보·키 세션·연결 흐름 수정본 a7ffd3e를 배포했고 공개 출처 가상 시험 5개 PASS를 확인했다. 최신 기록은 [T02_FIX_REPORT.md](T02_FIX_REPORT.md)의 후속 배포 검수를 따른다. 아래는 이전 버전 배포 기록이다.
+
 공개 주소: https://gmlduqzhd123-lab.github.io/padlet/
 
 사용자의 ‘배포까지 해줘’ 요청에 따라 기존 원격 main 커밋 f51d37f의 이력을 보존하는 별도 Git 체크아웃에서 배포했다. 앱 변경 커밋 6ce5de51d36148aeb9d46ed7529cd181f38661ad를 origin main에 일반 push했다. 강제 push는 하지 않았다. [Pages 작업](https://github.com/gmlduqzhd123-lab/padlet/actions/runs/37853250879)의 build/deploy 성공과 실제 공개 새 화면을 확인했다.

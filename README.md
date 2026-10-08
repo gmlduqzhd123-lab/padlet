@@ -4,7 +4,7 @@ GitHub Pages용 HTML/CSS/Vanilla JavaScript 정적 앱. T-00 진단, T-01 로컬
 
 ## 실행과 사용
 
-2026-10-09 후속 로컬 수정: 기본 버튼은 ‘게시물 가져오기’로 바뀌었고 최초 입력한 키를 현재 탭에서 유지한다. 고급 연결 진단과 첨부정보 해석을 개선했다. **이번 수정은 푸시/배포하지 않았다.** 아래 공개 배포 기록은 이전 버전이다. 최신 로컬 검수는 [T02_FIX_REPORT.md](docs/T02_FIX_REPORT.md)를 따른다.
+2026-10-09 T-02 후속 수정본 배포 완료: 기본 버튼은 ‘게시물 가져오기’이며 최초 입력한 키를 현재 탭에서 유지한다. 고급 연결 진단과 첨부정보 해석을 개선했다. 사용자 후속 요청에 따라 main/Pages에 반영했고 공개 출처 가상 파일 가져오기·ZIP 출력 시험 5개가 통과했다. 실제 인증 API/원본 파일 동일성은 미검증이다. 최신 구현·배포 검수는 [T02_FIX_REPORT.md](docs/T02_FIX_REPORT.md)를 따른다.
 
 공개 앱: [엽쌤의 패들렛 정리함](https://gmlduqzhd123-lab.github.io/padlet/). 2026-10-09 T-02 조건부 API 수집과 연결 안내 수정본을 GitHub main에 전송하고 Pages 배포 성공을 확인했다. 공개 출처에서 가상 CSV/XLSX·첨부 ZIP 가져오기와 ZIP 출력 시험 5개가 통과했다. 진입점은 index.html이다. 실제 Pages의 인증 API/첨부 CORS는 NOT_RUN이다. [배포 검수 기록](docs/DEPLOYMENT_REPORT.md).
 
