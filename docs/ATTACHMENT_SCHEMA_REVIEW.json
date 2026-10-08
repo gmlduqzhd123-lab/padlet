@@ -1,0 +1,27 @@
+{
+  "reviewedAt": "2026-10-09",
+  "source": "https://docs.padlet.dev/reference/get-post-attachment-data",
+  "method": "Public documentation HTML embedded OpenAPI, components.responses.attachmentData",
+  "documentHtmlSha256": "34648483a25b714e8bb923c5478744f2e3cf3aceced70bab3901b594f2ce30b5",
+  "dataType": "attachmentData",
+  "observedAttributeFields": [
+    "previewImageUrl",
+    "embedCode",
+    "poll"
+  ],
+  "observedPollFields": [
+    "question",
+    "choices",
+    "isActive",
+    "closedAt"
+  ],
+  "originalDownloadField": null,
+  "fileNameField": null,
+  "downloadHostAllowlist": [
+    "cdn.padlet.dev"
+  ],
+  "downloadHostEvidence": "https://docs.padlet.dev/reference/comment-object",
+  "previewExampleHost": "padlet-artifacts.storage.googleapis.com",
+  "previewHostEnabledForDownload": false,
+  "actualAccountTest": "NOT_RUN"
+}

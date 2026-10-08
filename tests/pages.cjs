@@ -31,15 +31,15 @@ const fflate = require("../assets/vendor/fflate-0.8.2.js");
       () => !document.getElementById("dataFile").disabled,
     );
     assert.equal(
-      await page.locator("#diagnose").textContent(),
-      "주소 확인 · 연결 안내",
+      await page.locator("#collectApi").textContent(),
+      "게시물 가져오기",
     );
     pass("live Pages HTTP 200, new version and Worker ready");
     const initialRequests = requests.length;
     await page
       .locator("#boardUrl")
       .fill("https://padlet.com/demo/board-abcdefghijklmnop");
-    await page.locator("#diagnose").click();
+    await page.locator("#collectApi").click();
     assert.match(
       await page.locator("#diagnosis").textContent(),
       /API 연결 검사 안 함/,
@@ -48,7 +48,6 @@ const fflate = require("../assets/vendor/fflate-0.8.2.js");
       await page.locator("#apiConnection").evaluate((n) => n.open),
       true,
     );
-    await page.locator("#apiBoard").click();
     await page.locator("#collectApi").click();
     assert.equal(requests.length, initialRequests);
     pass("live no-key guidance and zero remote data requests");

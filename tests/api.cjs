@@ -93,16 +93,21 @@ const fixture = {
       fileRequests = [],
       results = [];
     page.on("pageerror", (e) => errors.push(e.message));
+    const consoleMessages = [];
+    page.on("console", (message) => consoleMessages.push(message.text()));
     const pass = (name) => {
       results.push({ name, status: "PASS" });
       console.log("PASS", name);
     };
+    let boardDelay = 0;
     let fixSecond = false,
       denyApi = false;
     await page.route("https://api.padlet.dev/**", async (route) => {
       const req = route.request();
       apiRequests.push({ url: req.url(), headers: req.headers() });
       assert.equal(req.headers()["x-api-key"], "FICTIONAL_API_KEY");
+      if (boardDelay && req.url().includes("/boards/"))
+        await new Promise((r) => setTimeout(r, boardDelay));
       if (denyApi) {
         await route.fulfill({
           status: 403,
@@ -117,7 +122,17 @@ const fixture = {
         body: JSON.stringify(
           req.url().includes("/boards/")
             ? fixture
-            : { data: { type: "attachmentData", id: "virtual" } },
+            : {
+                data: {
+                  type: "attachmentData",
+                  attributes: {
+                    previewImageUrl:
+                      "https://padlet-artifacts.storage.googleapis.com/virtual-preview.jpg",
+                    embedCode: "",
+                    poll: null,
+                  },
+                },
+              },
         ),
       });
     });
@@ -146,6 +161,7 @@ const fixture = {
     await page.waitForFunction(
       () => !document.getElementById("dataFile").disabled,
     );
+    await page.locator("#advancedDiagnostics").evaluate((n) => (n.open = true));
     await page
       .locator("#boardUrl")
       .fill("https://padlet.com/mock/board-" + boardId);
@@ -203,7 +219,6 @@ const fixture = {
     denyApi = false;
     apiRequests.length = 0;
     await page.locator("#boardId").fill(boardId);
-    await page.locator("#apiKey").fill("FICTIONAL_API_KEY");
     await page.locator("#collectApi").click();
     await page.waitForFunction(() =>
       document.getElementById("stats").textContent.includes("가져옴 3"),
@@ -222,6 +237,9 @@ const fixture = {
     );
     pass(
       "mock board/section/posts and missing ID; pending excluded; metadata only",
+    );
+    pass(
+      "tab key reused after connection diagnostics without reentry; input empty",
     );
     await page.locator("#detail input[type=checkbox]").check();
     await page.locator(".post button").nth(1).click();
@@ -277,15 +295,287 @@ const fixture = {
     );
     assert.equal(fileRequests.length, 3);
     pass("manual retry only failed attachment; prior bytes retained");
+    const priorBody = await page.locator("#original").textContent();
+    await page
+      .locator("#supplementalFiles")
+      .setInputFiles(path.join(__dirname, "fixtures", "가상첨부.zip"));
+    await page.locator("#addLocalAssets").click();
+    await page.waitForFunction(
+      () => !document.getElementById("addLocalAssets").disabled,
+    );
+    assert.match(
+      await page.locator("#importStatus").textContent(),
+      /로컬 첨부 5개 추가/,
+    );
+    assert.equal(await page.locator("#original").textContent(), priorBody);
+    const addedId = await page
+      .locator("#detail select option")
+      .evaluateAll(
+        (opts) => opts.find((o) => o.value.startsWith("F-local-")).value,
+      );
+    await page.locator("#detail select").selectOption(addedId);
+    assert.match(
+      await page.locator("#detail").textContent(),
+      /사용자 수동 연결/,
+    );
+    pass(
+      "API project supplemental local ZIP added and manually linked with unique IDs; original body preserved",
+    );
+    boardDelay = 700;
+    const countBeforeDisconnect = apiRequests.length;
+    await page.locator("#collectApi").click();
+    await page.waitForFunction(
+      () => document.getElementById("collectApi").disabled,
+    );
+    assert.equal(await page.locator("#saveZip").isDisabled(), true);
+    assert.equal(await page.locator("#boardUrl").isDisabled(), true);
+    await page.locator("#clearKey").click();
+    await page.waitForFunction(
+      () => !document.getElementById("collectApi").disabled,
+    );
+    assert.match(
+      await page.locator("#connectionStatus").textContent(),
+      /키 없음/,
+    );
+    assert.equal(await page.locator("#original").textContent(), priorBody);
+    const afterDisconnect = apiRequests.length;
+    await page.locator("#collectApi").click();
+    assert.equal(apiRequests.length, afterDisconnect);
+    assert.match(
+      await page.locator("#diagnosis").textContent(),
+      /API 연결 검사 안 함/,
+    );
+    boardDelay = 0;
+    pass(
+      "disconnect cancels collection, clears session auth, keeps existing body/assets and prevents subsequent request; conflicting controls locked",
+    );
     const unit = await page.evaluate(async () => {
       const c = await import("./assets/js/api-client.js"),
         m = await import("./assets/js/api-collection.js"),
-        d = await import("./assets/js/attachment-download.js");
+        d = await import("./assets/js/attachment-download.js"),
+        info = await import("./assets/js/attachment-info.js"),
+        session = (
+          await import("./assets/js/api-session.js")
+        ).createApiSession();
       const result = [];
       const check = (name, value) => {
         if (!value) throw Error(name);
         result.push(name);
       };
+      const schema = {
+        data: {
+          type: "attachmentData",
+          attributes: {
+            previewImageUrl:
+              "https://padlet-artifacts.storage.googleapis.com/mock.jpg?signature=PREVIEW_SECRET",
+            embedCode: "<script>window.bad=99</script>",
+            poll: null,
+            downloadUrl: "https://evil.example/guessed.pdf",
+          },
+        },
+      };
+      const normalized = info.normalizeAttachmentData(schema, {
+        url: "https://cdn.padlet.dev/mock.pdf?signature=DOWNLOAD_SECRET",
+      });
+      check(
+        "official preview/embed interpreted; guessed downloadUrl ignored; candidate from post is unverified",
+        normalized.metadata.hasPreview &&
+          normalized.metadata.hasEmbed &&
+          normalized.metadata.originalStatus === "unverified" &&
+          normalized.candidate.includes("mock.pdf") &&
+          !JSON.stringify(normalized.metadata).includes("SECRET"),
+      );
+      const previewOnly = info.normalizeAttachmentData(schema, {
+        url: schema.data.attributes.previewImageUrl,
+      });
+      check(
+        "preview never promoted to original/download candidate",
+        previewOnly.candidate === null &&
+          previewOnly.metadata.type === "preview_only",
+      );
+      check(
+        "meaningful external view query preserved",
+        info.normalizeAttachmentData(schema, {
+          url: "https://www.youtube.com/watch?v=virtual123",
+        }).metadata.sourceUrl === "https://www.youtube.com/watch?v=virtual123",
+      );
+      check(
+        "sensitive view token excluded; original and preview addresses excluded from exported metadata",
+        info.publicViewUrl("https://example.com/view?id=1&token=PRIVATE") ===
+          null &&
+          !JSON.stringify(normalized.metadata).includes("DOWNLOAD_SECRET"),
+      );
+      check(
+        "transformed post image is not an original candidate",
+        info.normalizeAttachmentData(schema, {
+          url: "https://cdn.padlet.dev/mock.jpg?resize=20,20",
+        }).candidate === null,
+      );
+      check(
+        "poll classified without invented filename or original",
+        info.normalizeAttachmentData(
+          {
+            data: {
+              type: "attachmentData",
+              attributes: { poll: { question: "virtual" } },
+            },
+          },
+          {},
+        ).metadata.type === "poll",
+      );
+      let schemaRejected = false;
+      try {
+        info.normalizeAttachmentData(
+          { data: { type: "wrong", attributes: {} } },
+          {},
+        );
+      } catch {
+        schemaRejected = true;
+      }
+      check("unknown attachment response schema rejected", schemaRejected);
+      const csp = document
+        .querySelector('meta[http-equiv="Content-Security-Policy"]')
+        .content.split(";")
+        .find((s) => s.trim().startsWith("connect-src"))
+        .trim()
+        .split(/\s+/)
+        .slice(1);
+      check(
+        "CSP and download host allowlist agree without wildcard or entire HTTPS",
+        csp.includes("https://api.padlet.dev") &&
+          csp
+            .filter((s) => s !== "'self'" && s !== "https://api.padlet.dev")
+            .sort()
+            .join(",") ===
+            [...d.SUPPORTED_ATTACHMENT_HOSTS]
+              .map((h) => "https://" + h)
+              .sort()
+              .join(","),
+      );
+      session.set("VIRTUAL");
+      session.clear();
+      let afterClear = 0;
+      try {
+        await c.createApiClient(() => session.get(), {
+          wait: async () => {},
+          fetcher: async () => {
+            afterClear++;
+            return new Response("{}");
+          },
+        })("/v1/boards/abcdefghijklmnop");
+      } catch {}
+      check(
+        "cleared session key cannot be reused by previously created client",
+        !session.has() && afterClear === 0,
+      );
+      const failedInfoProject = m.mapBoard(
+        [
+          {
+            data: { id: "abcdefghijklmnop", type: "board" },
+            included: [1, 2].map((i) => ({
+              id: "post_" + i,
+              type: "post",
+              attributes: {
+                status: "approved",
+                content: {
+                  bodyHtml: "preserved " + i,
+                  attachment: {
+                    url:
+                      i === 1
+                        ? "https://cdn.padlet.dev/one.pdf"
+                        : "https://unsupported.example/two.pdf",
+                  },
+                },
+              },
+            })),
+          },
+        ],
+        "abcdefghijklmnop",
+      );
+      const ephemeral = new Map();
+      let metaCall = 0;
+      await m.collectAttachmentInfo(
+        failedInfoProject,
+        async () => {
+          if (metaCall++ === 0)
+            throw Object.assign(Error("virtual metadata"), { httpStatus: 403 });
+          return schema;
+        },
+        ephemeral,
+      );
+      check(
+        "metadata failure preserves all posts and subsequent unsupported host is explicit",
+        failedInfoProject.posts.length === 2 &&
+          failedInfoProject.posts[0].bodyOriginal === "preserved 1" &&
+          failedInfoProject.attachments[0].failure.httpStatus === 403 &&
+          failedInfoProject.attachments[1].status === "unsupported_host",
+      );
+      let cspCategory;
+      try {
+        await d.fetchAttachment(
+          "https://cdn.padlet.dev/csp.pdf",
+          new Set(["cdn.padlet.dev"]),
+          {
+            fetcher: async () => {
+              document.dispatchEvent(
+                new SecurityPolicyViolationEvent("securitypolicyviolation", {
+                  effectiveDirective: "connect-src",
+                  blockedURI: "https://cdn.padlet.dev",
+                }),
+              );
+              throw TypeError("virtual CSP");
+            },
+          },
+        );
+      } catch (e) {
+        cspCategory = e.category;
+      }
+      check(
+        "observed mock CSP violation distinguished from unknown network",
+        cspCategory === "csp",
+      );
+      for (const [name, fetcher, expected] of [
+        [
+          "expired HTTP",
+          async () => new Response("expired", { status: 403 }),
+          "http",
+        ],
+        [
+          "JSON error MIME",
+          async () =>
+            new Response('{"error":"virtual"}', {
+              headers: { "content-type": "application/problem+json" },
+            }),
+          "format",
+        ],
+        [
+          "JSON error disguised as bytes",
+          async () =>
+            new Response('{"error":"virtual"}', {
+              headers: { "content-type": "application/octet-stream" },
+            }),
+          "format",
+        ],
+        [
+          "unknown network",
+          async () => {
+            throw TypeError("virtual network");
+          },
+          "network",
+        ],
+      ]) {
+        let category;
+        try {
+          await d.fetchAttachment(
+            "https://cdn.padlet.dev/failure.pdf",
+            new Set(["cdn.padlet.dev"]),
+            { fetcher },
+          );
+        } catch (e) {
+          category = e.category;
+        }
+        check("attachment reason " + name, category === expected);
+      }
       let clock = 0,
         calls = 0;
       const waits = [];
@@ -573,6 +863,51 @@ const fixture = {
       0,
     );
     pass("no page errors; storage empty");
+    assert(
+      !consoleMessages.some(
+        (message) =>
+          message.includes("FICTIONAL_API_KEY") ||
+          message.includes("EPHEMERAL_PROBE"),
+      ),
+    );
+    assert.equal(
+      await page.evaluate(async () =>
+        indexedDB.databases ? (await indexedDB.databases()).length : 0,
+      ),
+      0,
+    );
+    assert.equal(
+      await page.evaluate(
+        async () => (await navigator.serviceWorker.getRegistrations()).length,
+      ),
+      0,
+    );
+    assert.equal(await page.evaluate(() => window.bad), undefined);
+    pass(
+      "fictional key and signed URL absent from browser console; no IndexedDB/service worker or embed execution",
+    );
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.reload();
+    await page.waitForFunction(
+      () => !document.getElementById("dataFile").disabled,
+    );
+    assert.equal(
+      await page.locator("#advancedDiagnostics").evaluate((n) => n.open),
+      false,
+    );
+    await page
+      .locator("#boardUrl")
+      .fill("https://padlet.com/mock/board-" + boardId);
+    const requestCount = apiRequests.length;
+    await page.locator("#collectApi").click();
+    assert.match(
+      await page.locator("#diagnosis").textContent(),
+      /API 연결 검사 안 함/,
+    );
+    assert.equal(apiRequests.length, requestCount);
+    pass(
+      "reload forgets key; default primary flow requests first key without advanced diagnostics or remote request",
+    );
     await page.screenshot({
       path: path.join(output, "api-desktop.png"),
       fullPage: true,

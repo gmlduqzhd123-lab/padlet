@@ -1,0 +1,196 @@
+{
+  "date": "2026-10-09",
+  "browser": "154.0.8037.98",
+  "source": "localhost/mock only",
+  "results": [
+    {
+      "name": "URL check opens key guidance; no-key diagnosis and collection make zero remote requests",
+      "status": "PASS"
+    },
+    {
+      "name": "mock successful connection reports current-origin response only; no attachment or save claim",
+      "status": "PASS"
+    },
+    {
+      "name": "mock permission failure gives concrete provider error instead of blanket unverified",
+      "status": "PASS"
+    },
+    {
+      "name": "mock board/section/posts and missing ID; pending excluded; metadata only",
+      "status": "PASS"
+    },
+    {
+      "name": "tab key reused after connection diagnostics without reentry; input empty",
+      "status": "PASS"
+    },
+    {
+      "name": "explicit direct-file/host approval; attachment requests have no key/cookies/referrer; login HTML fails independently",
+      "status": "PASS"
+    },
+    {
+      "name": "API ZIP contains actual bytes and failure/coverage ledger; key and signed URL absent",
+      "status": "PASS"
+    },
+    {
+      "name": "manual retry only failed attachment; prior bytes retained",
+      "status": "PASS"
+    },
+    {
+      "name": "API project supplemental local ZIP added and manually linked with unique IDs; original body preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "disconnect cancels collection, clears session auth, keeps existing body/assets and prevents subsequent request; conflicting controls locked",
+      "status": "PASS"
+    },
+    {
+      "name": "official preview/embed interpreted; guessed downloadUrl ignored; candidate from post is unverified",
+      "status": "PASS"
+    },
+    {
+      "name": "preview never promoted to original/download candidate",
+      "status": "PASS"
+    },
+    {
+      "name": "meaningful external view query preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "sensitive view token excluded; original and preview addresses excluded from exported metadata",
+      "status": "PASS"
+    },
+    {
+      "name": "transformed post image is not an original candidate",
+      "status": "PASS"
+    },
+    {
+      "name": "poll classified without invented filename or original",
+      "status": "PASS"
+    },
+    {
+      "name": "unknown attachment response schema rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "CSP and download host allowlist agree without wildcard or entire HTTPS",
+      "status": "PASS"
+    },
+    {
+      "name": "cleared session key cannot be reused by previously created client",
+      "status": "PASS"
+    },
+    {
+      "name": "metadata failure preserves all posts and subsequent unsupported host is explicit",
+      "status": "PASS"
+    },
+    {
+      "name": "observed mock CSP violation distinguished from unknown network",
+      "status": "PASS"
+    },
+    {
+      "name": "attachment reason expired HTTP",
+      "status": "PASS"
+    },
+    {
+      "name": "attachment reason JSON error MIME",
+      "status": "PASS"
+    },
+    {
+      "name": "attachment reason JSON error disguised as bytes",
+      "status": "PASS"
+    },
+    {
+      "name": "attachment reason unknown network",
+      "status": "PASS"
+    },
+    {
+      "name": "429 Retry-After + non-JSON 503 bounded retry + 1 second pace mock",
+      "status": "PASS"
+    },
+    {
+      "name": "Retry-After fallback/date",
+      "status": "PASS"
+    },
+    {
+      "name": "authorization error not retried",
+      "status": "PASS"
+    },
+    {
+      "name": "429 retries bounded",
+      "status": "PASS"
+    },
+    {
+      "name": "waiting cancels immediately",
+      "status": "PASS"
+    },
+    {
+      "name": "foreign pagination blocked and partial preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "board identity mismatch rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "documented response pagination exact URL; posts union; sectionless group preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "next page failure preserves acquired post",
+      "status": "PASS"
+    },
+    {
+      "name": "download cancellation leaves cancelled reference and no saved claim",
+      "status": "PASS"
+    },
+    {
+      "name": "same URL attachment bytes deduplicated and references kept",
+      "status": "PASS"
+    },
+    {
+      "name": "unsafe/unsupported attachment URL rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "unsafe/unsupported attachment URL rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "unsafe/unsupported attachment URL rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "unsafe/unsupported attachment URL rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "unsafe/unsupported attachment URL rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "explicit MIME mismatch rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "actual attachment byte budget enforced",
+      "status": "PASS"
+    },
+    {
+      "name": "zero byte attachment accepted without fake size",
+      "status": "PASS"
+    },
+    {
+      "name": "no page errors; storage empty",
+      "status": "PASS"
+    },
+    {
+      "name": "fictional key and signed URL absent from browser console; no IndexedDB/service worker or embed execution",
+      "status": "PASS"
+    },
+    {
+      "name": "reload forgets key; default primary flow requests first key without advanced diagnostics or remote request",
+      "status": "PASS"
+    }
+  ],
+  "pageErrors": []
+}

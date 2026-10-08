@@ -46,7 +46,10 @@ export function createApiClient(
       await wait(Math.max(0, next - now()), signal);
       next = now() + interval;
       try {
-        return await requestApi(path, key, { fetcher, signal });
+        return await requestApi(path, typeof key === "function" ? key() : key, {
+          fetcher,
+          signal,
+        });
       } catch (error) {
         if (signal?.aborted || error.name === "AbortError") throw abortError();
         const retry429 = error.httpStatus === 429 && attempt < 2;

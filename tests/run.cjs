@@ -114,6 +114,7 @@ const server = http.createServer((req, res) => {
   await page.waitForFunction(
     () => !document.getElementById("dataFile").disabled,
   );
+  await page.locator("#advancedDiagnostics").evaluate((n) => (n.open = true));
   pass("relative assets at /repo/");
   const initialRequests = requests.length;
   await page
@@ -140,6 +141,8 @@ const server = http.createServer((req, res) => {
     );
     assert.match(await page.locator("#stats").textContent(), /미확보 2/);
     assert.equal(await page.locator(".post").count(), 100);
+    if (filename.endsWith(".xlsx"))
+      assert.equal(await page.locator("#sheet").isDisabled(), false);
     assert.match(
       await page.locator("#original").textContent(),
       /숫자 123 유지/,
@@ -174,7 +177,7 @@ const server = http.createServer((req, res) => {
   await page.locator("#detail select").selectOption("F-0003");
   assert.match(await page.locator("#stats").textContent(), /미확보 1/);
   pass("manual ambiguous match");
-  await page.locator("details").evaluate((n) => (n.open = true));
+  await page.locator("#apiConnection").evaluate((n) => (n.open = true));
   await page.locator("#apiKey").fill("FICTIONAL_KEY_LEAK_PROBE");
   await page.locator("#confirmSave").check();
   const downloadPromise = page.waitForEvent("download");
@@ -313,9 +316,21 @@ const server = http.createServer((req, res) => {
       blocked = true;
     }
     check("zip traversal", blocked);
-    const symlink=fflate.zipSync({'link.txt':new Uint8Array([1])});
-    const sv=new DataView(symlink.buffer);for(let i=0;i<symlink.length-46;i++){if(sv.getUint32(i,true)===0x02014b50){sv.setUint32(i+38,0xa1ff0000,true);break;}}
-    blocked=false;try{l.unzipChecked(symlink);}catch{blocked=true;}check('ZIP symlink rejected',blocked);
+    const symlink = fflate.zipSync({ "link.txt": new Uint8Array([1]) });
+    const sv = new DataView(symlink.buffer);
+    for (let i = 0; i < symlink.length - 46; i++) {
+      if (sv.getUint32(i, true) === 0x02014b50) {
+        sv.setUint32(i + 38, 0xa1ff0000, true);
+        break;
+      }
+    }
+    blocked = false;
+    try {
+      l.unzipChecked(symlink);
+    } catch {
+      blocked = true;
+    }
+    check("ZIP symlink rejected", blocked);
     let closed = false;
     const mockDir = {
       getFileHandle: async () => ({
@@ -510,7 +525,7 @@ const server = http.createServer((req, res) => {
     path.join(output, "results.json"),
     JSON.stringify(
       {
-        date: "2026-10-08",
+        date: "2026-10-09",
         browser: await browser.version(),
         results,
         errors,

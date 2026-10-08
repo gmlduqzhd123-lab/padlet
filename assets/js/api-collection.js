@@ -2,6 +2,8 @@ import { plainText, organize, safeUrl, utf8 } from "./security.js";
 import { kind } from "./local-import.js";
 import { LIMITS } from "./config.js";
 import { abortError } from "./api-client.js";
+import { normalizeAttachmentData, publicViewUrl } from "./attachment-info.js";
+import { attachmentUrl } from "./attachment-download.js";
 
 const candidateUrls = new WeakMap();
 export function boardPath(id) {
@@ -90,7 +92,7 @@ export function mapBoard(pages, id) {
       sections.push(section);
     }
     const pid = "P-" + String(i + 1).padStart(4, "0");
-    const source = safeUrl(attr.webUrl?.live);
+    const source = publicViewUrl(attr.webUrl?.live);
     const p = {
       id: pid,
       sourcePostId: raw.id,
@@ -128,6 +130,8 @@ export function mapBoard(pages, id) {
         postIds: [pid],
         reference: source || "원문 링크 미확보",
         originalName: "첨부정보 확인 필요",
+        originalStatus: "unverified",
+        type: "unknown",
         mediaKind: type,
         sourceUrl: null,
         assetId: null,
@@ -140,7 +144,7 @@ export function mapBoard(pages, id) {
       };
       attachments.push(a);
       p.attachmentIds.push(a.id);
-      candidates.set(a.id, url);
+      candidates.set(a.id, { url, poll: !!content.attachment.poll });
     }
     return p;
   });
@@ -155,7 +159,7 @@ export function mapBoard(pages, id) {
     board: {
       id,
       title: board.attributes?.title ?? "",
-      sourceUrl: safeUrl(board.attributes?.webUrl?.live),
+      sourceUrl: publicViewUrl(board.attributes?.webUrl?.live),
       provenance: "api-response",
     },
     coverage: {
@@ -244,20 +248,33 @@ export async function collectAttachmentInfo(
           encodeURIComponent(post.sourcePostId) +
           "/attachmentData",
       );
-      if (!response.data || typeof response.data !== "object")
-        throw Error("첨부정보 응답 구조 미확인");
-      a.match.evidence = "첨부정보 응답 읽음 · 원본 파일 여부는 별도 확인";
-      const candidate = candidateUrls.get(project)?.get(a.id);
-      if (candidate) {
-        ephemeral.set(a.id, candidate);
-        const u = new URL(candidate);
-        a.originalName =
-          decodeURIComponent(u.pathname.split("/").at(-1)) || "첨부";
-        if (a.mediaKind === "link") {
-          a.status = "linked_only";
-          a.sourceUrl = u.origin + u.pathname;
+      const info = normalizeAttachmentData(
+        response,
+        candidateUrls.get(project)?.get(a.id),
+      );
+      Object.assign(a, info.metadata);
+      a.match.evidence =
+        "공식 첨부정보 해석 · 원본 주소 미확인 · " + info.metadata.type;
+      if (info.candidate) ephemeral.set(a.id, info.candidate);
+      a.status =
+        info.metadata.type === "external_view"
+          ? "linked_only"
+          : "manual_required";
+      if (info.candidate) {
+        try {
+          attachmentUrl(
+            info.candidate,
+            new Set([new URL(info.candidate).hostname]),
+          );
+        } catch (error) {
+          a.status =
+            error.category === "host" ? "unsupported_host" : "manual_required";
+          a.failure = {
+            category: error.category || "format",
+            message: error.message,
+          };
         }
-      } else a.match.evidence = "투표 또는 지원하지 않는 첨부: 원문 확인";
+      }
     } catch (error) {
       if (signal?.aborted) {
         a.status = "cancelled";
@@ -268,7 +285,8 @@ export async function collectAttachmentInfo(
         category: "metadata",
         httpStatus: error.httpStatus ?? null,
         providerCode: error.providerCode ?? null,
-        message: "첨부정보 읽기 실패: 원문에서 수동 확인",
+        message:
+          "첨부정보 읽기 실패 · " + error.message + " · 원문에서 수동 확인",
       };
     } finally {
       candidateUrls.get(project)?.delete(a.id);

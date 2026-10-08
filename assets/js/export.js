@@ -114,6 +114,12 @@ export function documents(p, assets, options = {}) {
         "원본 참조",
         "연결",
         "근거",
+        "확보상태",
+        "실패사유",
+        "원본확인",
+        "실패분류",
+        "HTTP",
+        "공급자코드",
         "확보바이트",
         "출력경로",
       ],
@@ -123,6 +129,12 @@ export function documents(p, assets, options = {}) {
         a.reference,
         a.match.status,
         a.match.evidence,
+        a.status,
+        a.failure?.message || "",
+        a.originalStatus || "입력 파일 기준",
+        a.failure?.category || "",
+        a.failure?.httpStatus ?? "",
+        a.failure?.providerCode || "",
         a.bytesReceived,
         a.assetId
           ? attachmentPath(
@@ -137,7 +149,17 @@ export function documents(p, assets, options = {}) {
   add(
     "00_안내와목록/미확보자료.csv",
     csv([
-      ["첨부ID", "게시물ID", "참조", "상태", "다음 행동"],
+      [
+        "첨부ID",
+        "게시물ID",
+        "참조",
+        "상태",
+        "실패사유",
+        "실패분류",
+        "HTTP",
+        "공급자코드",
+        "다음 행동",
+      ],
       ...refs
         .filter((a) => !a.assetId && a.status !== "linked_only")
         .map((a) => [
@@ -145,6 +167,10 @@ export function documents(p, assets, options = {}) {
           a.postIds.join(";"),
           a.reference,
           a.status + " / " + a.match.status,
+          a.failure?.message || a.match.evidence,
+          a.failure?.category || "",
+          a.failure?.httpStatus ?? "",
+          a.failure?.providerCode || "",
           "원본에서 파일 확보 후 수동 연결",
         ]),
     ]),

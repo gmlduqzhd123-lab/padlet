@@ -12,6 +12,8 @@ import { safeUrl } from "./security.js";
 import { createApiClient } from "./api-client.js";
 import { collectBoard, collectAttachmentInfo } from "./api-collection.js";
 import { downloadAttachments, attachmentUrl } from "./attachment-download.js";
+import { createApiSession } from "./api-session.js";
+const apiSession = createApiSession();
 const $ = (id) => document.getElementById(id);
 let table = null,
   project = null,
@@ -64,27 +66,67 @@ function setRemoteBusy(value) {
     "apiBoard",
     "apiAttachment",
     "saveZip",
+    "diagnose",
+    "boardUrl",
+    "boardId",
+    "apiKey",
+    "attachments",
+    "supplementalFiles",
+    "addLocalAssets",
+    "selectAll",
+    "selectNone",
+    "search",
+    "sectionFilter",
+    "typeFilter",
   ])
     $(id).disabled = value;
   $("importButton").disabled = value || !table;
   capabilities();
   if (value) $("saveFolder").disabled = true;
   $("dataFile").disabled = value;
+  for (const control of document.querySelectorAll(
+    "#posts input, #posts button, #detail input, #detail select, #mapping select, #sheet, #encoding, #showAuthor, #showDate, #confirmSave",
+  )) {
+    if (value) {
+      if (control.dataset.wasDisabled === undefined)
+        control.dataset.wasDisabled = String(control.disabled);
+      control.disabled = true;
+    } else if (control.dataset.wasDisabled !== undefined) {
+      control.disabled = control.dataset.wasDisabled === "true";
+      delete control.dataset.wasDisabled;
+    }
+  }
+  $("sheet").disabled = value || !table || table.sheets.length < 2;
 }
 async function importApi() {
   if (busy) return;
+  try {
+    const id =
+      $("boardId").value.trim() || parseBoardUrl($("boardUrl").value).id;
+    if (!id || !/^[a-zA-Z0-9]{16,22}$/.test(id)) {
+      $("advancedDiagnostics").open = true;
+      $("boardId").focus();
+      throw Error(
+        "보드 ID 미확정: 고급 연결 진단에서 직접 입력하거나 내보낸 파일을 이용하세요.",
+      );
+    }
+  } catch (error) {
+    text("diagnosis", error.message);
+    return;
+  }
   if (!requireApiKey()) return;
-  let key = $("apiKey").value;
   let partial = null;
   const candidates = new Map();
   controller = new AbortController();
   const signal = controller.signal;
   setRemoteBusy(true);
-  $("apiKey").value = "";
   try {
     const id =
       $("boardId").value.trim() || parseBoardUrl($("boardUrl").value).id;
-    const request = createApiClient(key, { signal, onProgress: apiProgress });
+    const request = createApiClient(() => apiSession.get(), {
+      signal,
+      onProgress: apiProgress,
+    });
     const next = await collectBoard(id, request, {
       signal,
       onProgress: apiProgress,
@@ -94,7 +136,7 @@ async function importApi() {
       signal,
       onProgress: apiProgress,
     });
-    remoteUrls = candidates;
+    remoteUrls = apiSession.has() ? candidates : new Map();
     installProject(next);
     text(
       "diagnosis",
@@ -127,7 +169,6 @@ async function importApi() {
           : error.message + "\n로컬 내보내기 파일로 계속할 수 있습니다.",
       );
   } finally {
-    key = "";
     controller = null;
     setRemoteBusy(false);
   }
@@ -185,11 +226,21 @@ function capabilities() {
 }
 capabilities();
 function requireApiKey() {
-  if ($("apiKey").value.trim()) return true;
+  if ($("apiKey").value.trim()) {
+    apiSession.set($("apiKey").value);
+    $("apiKey").value = "";
+  }
+  if (apiSession.has()) {
+    text(
+      "connectionStatus",
+      "키 준비됨 · 현재 탭 메모리만 사용 · API 권한은 요청 결과로 확인",
+    );
+    return true;
+  }
   $("apiConnection").open = true;
   text(
     "diagnosis",
-    "API 연결 검사 안 함 · API 키가 입력되지 않았습니다.\n아래 키 입력 후 ‘보드 연결 검사’ 또는 ‘게시물 가져오기’를 누르세요.\n키가 없다면 ‘API 키 없이 CSV / XLSX · 첨부 ZIP 가져오기’를 이용하세요.",
+    "API 연결 검사 안 함 · API 키가 입력되지 않았습니다.\n최초 키 입력 후 ‘게시물 가져오기’를 다시 누르세요. 같은 탭에서는 키를 다시 입력하지 않아도 됩니다.\n키가 없다면 ‘API 키 없이 CSV / XLSX · 첨부 ZIP 가져오기’를 이용하세요.",
   );
   $("apiKey").focus();
   return false;
@@ -204,7 +255,7 @@ $("diagnose").onclick = () => {
           ? "보드 ID 후보: " + b.id
           : "보드 ID 미확정: 패들렛 Developer 메뉴에서 확인 필요") +
         "\n주소 형식만 확인했습니다. 이 버튼은 API 요청을 보내지 않습니다.\n" +
-        ($("apiKey").value.trim()
+        (apiSession.has() || $("apiKey").value.trim()
           ? "키 입력됨 · 아래 ‘보드 연결 검사’ 또는 ‘게시물 가져오기’를 누르세요."
           : "API 연결 검사 안 함 · API 키가 필요합니다. 키 없이 쓰려면 내보낸 파일을 가져오세요.") +
         "\n첨부 파일 확보·실제 저장: 아직 수행하지 않음",
@@ -220,16 +271,18 @@ async function diagnoseApi(type) {
   if (!requireApiKey()) return;
   setRemoteBusy(true);
   controller = new AbortController();
-  let key = $("apiKey").value;
-  $("apiKey").value = "";
   try {
     const id =
       type === "board"
         ? $("boardId").value.trim() || parseBoardUrl($("boardUrl").value).id
         : $("postId").value.trim();
-    const j = await (type === "board" ? readBoard : readAttachment)(id, key, {
-      signal: controller.signal,
-    });
+    const j = await (type === "board" ? readBoard : readAttachment)(
+      id,
+      apiSession.get(),
+      {
+        signal: controller.signal,
+      },
+    );
     text(
       "diagnosis",
       (type === "board" ? "보드" : "첨부정보") +
@@ -237,7 +290,7 @@ async function diagnoseApi(type) {
         (j.data ? "data 필드 있음" : "data 필드 없음: 스키마 확인 필요") +
         "\n현재 출처에서 이번 요청의 응답을 읽었습니다. 다른 보드·계정·출처의 연결은 확인하지 않았습니다.\n" +
         (type === "board"
-          ? "게시물 정리는 키를 다시 입력한 후 ‘공식 API로 게시물 가져오기’를 누르세요.\n"
+          ? "같은 탭에서 키 재입력 없이 ‘게시물 가져오기’를 누르세요.\n"
           : "") +
         "첨부 파일 바이트 확보·실제 저장: 이 검사에서는 수행하지 않음",
     );
@@ -250,7 +303,6 @@ async function diagnoseApi(type) {
         "\n키 없이 내보낸 파일로 계속할 수 있습니다.",
     );
   } finally {
-    key = "";
     controller = null;
     setRemoteBusy(false);
   }
@@ -259,14 +311,59 @@ $("apiBoard").onclick = () => diagnoseApi("board");
 $("apiAttachment").onclick = () => diagnoseApi("attachment");
 $("clearKey").onclick = () => {
   $("apiKey").value = "";
+  apiSession.clear();
   controller?.abort();
-  text("diagnosis", "키 입력 지움 · 진행 중 진단 중지");
+  remoteUrls.clear();
+  approvedHosts.clear();
+  text("connectionStatus", "연결 해제 상태 · 키 없음");
+  text(
+    "diagnosis",
+    "연결 해제 · 요청 취소 · 키 지움 · 확보한 자료는 유지됩니다.",
+  );
+};
+$("addLocalAssets").onclick = async () => {
+  if (busy) return;
+  if (!project) {
+    text("importStatus", "먼저 게시물을 가져오세요.");
+    return;
+  }
+  if (!$("supplementalFiles").files.length) {
+    text("importStatus", "추가할 로컬 첨부를 선택하세요.");
+    return;
+  }
+  setRemoteBusy(true);
+  try {
+    const added = await localTask("readAssets", [
+      ...$("supplementalFiles").files,
+    ]);
+    if (
+      assets.reduce((n, f) => n + f.bytes.length, 0) +
+        added.reduce((n, f) => n + f.bytes.length, 0) >
+      500 * 1024 * 1024
+    )
+      throw Error("전체 파일 바이트 예산 초과");
+    for (const file of added) {
+      file.id = "F-local-" + crypto.randomUUID();
+      assets.push(file);
+    }
+    $("confirmSave").checked = false;
+    render();
+    text(
+      "importStatus",
+      `로컬 첨부 ${added.length}개 추가 · 상세의 파일 선택으로 수동 연결하세요. 본문은 유지됩니다.`,
+    );
+  } catch (error) {
+    announce(error);
+  } finally {
+    setRemoteBusy(false);
+  }
 };
 $("cancel").onclick = () => controller?.abort();
 $("cancelLocal").onclick = () => {
+  if (!busy || controller) return;
   $("dataFile").disabled = true;
   cancelLocal(() => {
-    $("dataFile").disabled = false;
+    $("dataFile").disabled = busy;
   });
 };
 function mapping() {
@@ -481,6 +578,13 @@ function renderDetail() {
     const d = node("div");
     d.className = "attachment";
     if (a.failure) d.append(node("p", a.failure.message));
+    if (a.originalStatus)
+      d.append(
+        node(
+          "p",
+          `첨부 유형: ${a.type} · 원본 주소/동일성 미검증${a.hasPreview ? " · 미리보기 있음 (요청·저장하지 않음)" : ""}${a.hasEmbed ? " · 임베드 있음 (실행하지 않음)" : ""}`,
+        ),
+      );
     if (remoteUrls.has(a.id) && !a.assetId && a.status !== "linked_only") {
       const candidate = remoteUrls.get(a.id);
       const host = new URL(candidate).hostname;
@@ -488,7 +592,7 @@ function renderDetail() {
         confirm = node("input");
       confirm.type = "checkbox";
       confirm.checked = approvedHosts.has(a.id);
-      confirm.setAttribute("aria-label", a.id + " 직접 원본/호스트 확인");
+      confirm.setAttribute("aria-label", a.id + " 첨부 후보/호스트 선택");
       try {
         attachmentUrl(candidate, new Set([host]));
       } catch {
@@ -502,7 +606,7 @@ function renderDetail() {
       label.append(
         confirm,
         document.createTextNode(
-          ` 직접 원본 파일과 호스트 ${host}를 확인했습니다${confirm.disabled ? " (현재 미지원 호스트/형식: 수동 확보 필요)" : ""}`,
+          ` 원본 미확인 첨부 후보를 ${host}에서 요청하겠습니다${confirm.disabled ? " (현재 미지원 호스트/형식: 로컬 첨부 추가·수동 연결 필요)" : ""}`,
         ),
       );
       d.append(label);
@@ -533,6 +637,7 @@ function renderDetail() {
       a.bytesReceived =
         assets.find((f) => f.id === a.assetId)?.bytes.length || 0;
       a.status = a.assetId ? "discovered" : "manual_required";
+      if (a.assetId) a.failure = null;
       render();
     };
     d.append(select);
@@ -563,6 +668,8 @@ function checkSave() {
     throw Error("선택 자료와 개인정보 확인란을 체크하세요.");
 }
 $("saveZip").onclick = () => {
+  if (busy) return;
+  setRemoteBusy(true);
   try {
     checkSave();
     const files = documents(project, assets, options());
@@ -587,9 +694,13 @@ $("saveZip").onclick = () => {
     );
   } catch (e) {
     text("saveResult", e.message);
+  } finally {
+    setRemoteBusy(false);
   }
 };
 $("saveFolder").onclick = async () => {
+  if (busy) return;
+  setRemoteBusy(true);
   try {
     checkSave();
     const parent = await window.showDirectoryPicker({ mode: "readwrite" });
@@ -612,6 +723,8 @@ $("saveFolder").onclick = async () => {
         ? "폴더 선택 취소 · 정리 자료는 유지됩니다. 다시 선택하거나 ZIP을 사용하세요."
         : e.message,
     );
+  } finally {
+    setRemoteBusy(false);
   }
 };
 window.addEventListener("beforeunload", (e) => {
