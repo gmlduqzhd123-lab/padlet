@@ -1,0 +1,18 @@
+[
+  {
+    "file": "fflate-0.8.2.js",
+    "sha256": "c3b34f2e9f5e74d4d7d64e01cac7a0c01954c6c406414d42185c7b53d6875ddf"
+  },
+  {
+    "file": "fflate-LICENSE.txt",
+    "sha256": "805f6cb28bb8b6d3a0badd83c93bccd9671fa01a3b4b92b7042b0743325ac243"
+  },
+  {
+    "file": "xlsx-0.20.3.min.js",
+    "sha256": "cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41"
+  },
+  {
+    "file": "xlsx-LICENSE.txt",
+    "sha256": "4d2a38ac35cda06a555c84074a819d413339cd3691b822cae50f8f322fe01f64"
+  }
+]

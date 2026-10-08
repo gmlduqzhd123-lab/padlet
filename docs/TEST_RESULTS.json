@@ -1,0 +1,164 @@
+{
+  "date": "2026-10-08",
+  "browser": "154.0.8037.98",
+  "results": [
+    {
+      "name": "relative assets at /repo/",
+      "status": "PASS"
+    },
+    {
+      "name": "link diagnosis",
+      "status": "PASS"
+    },
+    {
+      "name": "가상100.csv 100 posts, missing fields, attachment 2/3, ambiguous, hyperlink 171ms",
+      "status": "PASS"
+    },
+    {
+      "name": "가상100.xlsx 100 posts, missing fields, attachment 2/3, ambiguous, hyperlink 137ms",
+      "status": "PASS"
+    },
+    {
+      "name": "search section type filters",
+      "status": "PASS"
+    },
+    {
+      "name": "manual ambiguous match",
+      "status": "PASS"
+    },
+    {
+      "name": "download ZIP independently decompressed and verified",
+      "status": "PASS"
+    },
+    {
+      "name": "fictional key absent from exported files and browser storage",
+      "status": "PASS"
+    },
+    {
+      "name": "local data requests zero and XSS zero",
+      "status": "PASS"
+    },
+    {
+      "name": "path ../x",
+      "status": "PASS"
+    },
+    {
+      "name": "path /x",
+      "status": "PASS"
+    },
+    {
+      "name": "path C:/x",
+      "status": "PASS"
+    },
+    {
+      "name": "path a\\b",
+      "status": "PASS"
+    },
+    {
+      "name": "reserved NFC",
+      "status": "PASS"
+    },
+    {
+      "name": "csv formula",
+      "status": "PASS"
+    },
+    {
+      "name": "url reject",
+      "status": "PASS"
+    },
+    {
+      "name": "url reject",
+      "status": "PASS"
+    },
+    {
+      "name": "url reject",
+      "status": "PASS"
+    },
+    {
+      "name": "key header exact origin",
+      "status": "PASS"
+    },
+    {
+      "name": "API mock INVALID_API_KEY",
+      "status": "PASS"
+    },
+    {
+      "name": "key header exact origin",
+      "status": "PASS"
+    },
+    {
+      "name": "API mock NOT_ADMIN",
+      "status": "PASS"
+    },
+    {
+      "name": "key header exact origin",
+      "status": "PASS"
+    },
+    {
+      "name": "API mock NOT_PAYING_USER",
+      "status": "PASS"
+    },
+    {
+      "name": "network cause unknown",
+      "status": "PASS"
+    },
+    {
+      "name": "actual unzip byte budget",
+      "status": "PASS"
+    },
+    {
+      "name": "zip traversal",
+      "status": "PASS"
+    },
+    {
+      "name": "ZIP symlink rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "folder mock close then saved",
+      "status": "PASS"
+    },
+    {
+      "name": "folder mock failure",
+      "status": "PASS"
+    },
+    {
+      "name": "directory mock failure recorded",
+      "status": "PASS"
+    },
+    {
+      "name": "standard JSON blank title and zero-byte attachment",
+      "status": "PASS"
+    },
+    {
+      "name": "malformed ZIP rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "unknown columns require manual map",
+      "status": "PASS"
+    },
+    {
+      "name": "folder cancellation mock retains project",
+      "status": "PASS"
+    },
+    {
+      "name": "mobile viewport no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "100 posts ~1MiB text + 30 assets ~50MiB import 852ms",
+      "status": "PASS"
+    },
+    {
+      "name": "50MiB attachment ZIP roundtrip",
+      "status": "PASS"
+    },
+    {
+      "name": "standalone read HTML offline and no remote resource requests",
+      "status": "PASS"
+    }
+  ],
+  "errors": [],
+  "localDataRequests": 0
+}

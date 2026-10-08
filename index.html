@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src 'self' https://api.padlet.dev; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>엽쌤의 패들렛 정리함</title>
+    <link rel="stylesheet" href="./assets/css/app.css" />
+    <script defer src="./assets/vendor/xlsx-0.20.3.min.js"></script>
+    <script defer src="./assets/vendor/fflate-0.8.2.js"></script>
+    <script type="module" src="./assets/js/app.js"></script>
+  </head>
+  <body>
+    <header>
+      <div>
+        <b>엽쌤의 패들렛 정리함</b><span class="badge">로컬 가져오기 MVP</span>
+      </div>
+      <p>
+        자료는 이 탭의 메모리에서 처리합니다. 새로고침 전에 결과를 저장하세요.
+      </p>
+    </header>
+    <main>
+      <section>
+        <h1>패들렛에 모은 자료,<br />내 폴더에 차곡차곡.</h1>
+        <p>
+          게시글은 읽기 좋은 문서로, 첨부자료는 출처가 연결된 파일로 정리합니다.
+        </p>
+        <label for="boardUrl">패들렛 보드 링크</label>
+        <div class="row">
+          <input
+            id="boardUrl"
+            type="url"
+            placeholder="https://padlet.com/…"
+          /><button id="diagnose">연결 가능성 진단</button>
+        </div>
+        <pre id="diagnosis" aria-live="polite">
+API 자동 수집은 미검증입니다. 내보낸 파일로 바로 시작할 수 있습니다.</pre
+        >
+        <details>
+          <summary>공식 API 읽기 진단 · 고급 / 미검증</summary>
+          <p>
+            유료 API 자격·보드 관리자 권한·브라우저 접근 허용이 각각 필요합니다.
+            이 단계는 자료 자동 수집을 완료하지 않습니다.
+          </p>
+          <label for="apiKey">API 키 (세션 메모리만 사용)</label
+          ><input id="apiKey" type="password" autocomplete="off" /><button
+            id="apiBoard"
+          >
+            보드 메타데이터 GET 진단</button
+          ><label for="postId">첨부정보 진단용 게시물 ID</label
+          ><input id="postId" /><button id="apiAttachment">
+            첨부정보 GET 진단</button
+          ><button id="clearKey" class="secondary">키 지우기</button
+          ><button id="cancel" class="secondary">진단 중지</button>
+        </details>
+      </section>
+      <section id="import">
+        <h2>1. 내보낸 파일 가져오기</h2>
+        <p>
+          CSV / XLSX / 표준 JSON + 첨부 ZIP 또는 개별 파일. 원격 첨부는 자동
+          요청하지 않습니다.
+        </p>
+        <div class="grid">
+          <div>
+            <label for="dataFile">게시물 파일</label
+            ><input id="dataFile" type="file" accept=".csv,.xlsx,.json" /><label
+              for="encoding"
+              >CSV 인코딩</label
+            ><select id="encoding">
+              <option value="utf-8">UTF-8</option>
+              <option value="euc-kr">한국어 EUC-KR / CP949</option></select
+            ><label for="sheet">XLSX 시트</label
+            ><select id="sheet" disabled></select>
+          </div>
+          <div>
+            <label for="attachments">첨부 ZIP / 개별 파일 (여러 개 가능)</label
+            ><input id="attachments" type="file" multiple />
+            <p>
+              ZIP 경로와 실제 해제 바이트를 검사합니다. HTML·SVG·실행파일은
+              실행하지 않습니다.
+            </p>
+          </div>
+        </div>
+        <div id="mapping"></div>
+        <button id="importButton" disabled>열 연결 적용 · 가져오기</button
+        ><button id="cancelLocal" class="secondary">파일 처리 중지</button>
+        <p id="importStatus" aria-live="polite"></p>
+      </section>
+      <section>
+        <h2>2. 자료 확인</h2>
+        <p id="stats">내보내기 파일 기준 · 아직 가져온 자료가 없습니다.</p>
+        <div class="row">
+          <label>검색<input id="search" type="search" /></label
+          ><label
+            >섹션<select id="sectionFilter">
+              <option value="">모든 섹션</option>
+            </select></label
+          ><label
+            >자료 유형<select id="typeFilter">
+              <option value="">모든 유형</option>
+              <option value="body">본문 있음</option>
+              <option value="document">문서</option>
+              <option value="image">사진</option>
+              <option value="video">영상</option>
+              <option value="audio">음성</option>
+              <option value="link">외부 링크</option>
+              <option value="unresolved">미확보 / 모호</option>
+            </select></label
+          ><button id="selectAll" class="secondary">전체 선택</button
+          ><button id="selectNone" class="secondary">전체 제외</button>
+        </div>
+        <p id="unlinked" class="muted"></p>
+        <div class="workspace">
+          <div id="posts"></div>
+          <div id="detail">
+            <p>게시물을 선택하면 원문과 첨부 연결을 확인할 수 있습니다.</p>
+          </div>
+        </div>
+      </section>
+      <section>
+        <h2>3. 글 정리 · 원문과 사본 비교</h2>
+        <label
+          ><input id="showAuthor" type="checkbox" checked /> 정리본에 작성자
+          표시</label
+        ><label
+          ><input id="showDate" type="checkbox" checked /> 정리본에 작성일
+          표시</label
+        >
+        <div class="grid">
+          <div>
+            <h3>원문 (변경하지 않음)</h3>
+            <pre id="original"></pre>
+          </div>
+          <div>
+            <h3>정리본 (규칙 기반 문단 정돈)</h3>
+            <pre id="organized"></pre>
+          </div>
+        </div>
+      </section>
+      <section>
+        <h2>4. 저장 및 결과</h2>
+        <p>
+          선택 게시물·원문·정리본·첨부 대조표·미확보 목록을 저장합니다. 미연결
+          파일도 별도 폴더에 보관합니다.
+        </p>
+        <label
+          ><input id="confirmSave" type="checkbox" /> 선택한 자료와 개인정보
+          포함 여부를 확인했습니다.</label
+        >
+        <p id="capability"></p>
+        <button id="saveFolder">폴더 선택 · 새 작업 폴더에 저장</button
+        ><button id="saveZip">결과 ZIP 생성 · 다운로드</button>
+        <pre id="saveResult" aria-live="polite">
+실제 저장 확인 0개 · ZIP 생성 0개</pre
+        >
+      </section>
+      <footer>
+        T-00 / T-01 · 자동 수집, 핵심 발췌, Codex 재창작은 후속 단계입니다.
+        <a href="./docs/FEASIBILITY.md">연결 검증 기록</a>
+      </footer>
+    </main>
+  </body>
+</html>
