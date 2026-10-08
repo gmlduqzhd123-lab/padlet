@@ -4,9 +4,9 @@ GitHub Pages용 HTML/CSS/Vanilla JavaScript 정적 앱. T-00 진단, T-01 로컬
 
 ## 실행과 사용
 
-GitHub 저장소 https://github.com/gmlduqzhd123-lab/padlet.git 를 로컬 origin에 연결했다. 사용자가 기존 T-01 파일을 웹 업로드했고 https://gmlduqzhd123-lab.github.io/padlet/ 의 HTTP 200과 제목을 앞선 대화에서 확인했다. 이번 T-02 후속 변경은 아직 로컬이며 커밋·푸시·Pages 갱신을 수행하지 않았다. 진입점은 index.html이다. 실제 Pages의 인증 API/첨부 CORS는 NOT_RUN이다.
+공개 앱: [엽쌤의 패들렛 정리함](https://gmlduqzhd123-lab.github.io/padlet/). 2026-10-09 T-02 조건부 API 수집과 연결 안내 수정본을 GitHub main에 전송하고 Pages 배포 성공을 확인했다. 공개 출처에서 가상 CSV/XLSX·첨부 ZIP 가져오기와 ZIP 출력 시험 5개가 통과했다. 진입점은 index.html이다. 실제 Pages의 인증 API/첨부 CORS는 NOT_RUN이다. [배포 검수 기록](docs/DEPLOYMENT_REPORT.md).
 
-1. Pages에서 앱을 연다. ‘주소 확인 · 연결 안내’는 주소 형식만 확인하고 API 요청을 보내지 않는다. API로 읽으려면 펼쳐진 패널에 키를 입력하고 ‘보드 연결 검사’ 또는 ‘공식 API로 게시물 가져오기’를 누른다. 키 없이 사용하려면 CSV/XLSX·첨부 ZIP 가져오기로 이동한다. 이 안내 수정도 아직 로컬 변경이다.
+1. Pages에서 앱을 연다. ‘주소 확인 · 연결 안내’는 주소 형식만 확인하고 API 요청을 보내지 않는다. API로 읽으려면 펼쳐진 패널에 키를 입력하고 ‘보드 연결 검사’ 또는 ‘공식 API로 게시물 가져오기’를 누른다. 키 없이 사용하려면 CSV/XLSX·첨부 ZIP 가져오기로 이동한다.
 2. 패들렛에서 내보낸 CSV/XLSX(게시물 시트) 또는 지원 JSON을 선택한다. CSV가 깨지면 EUC-KR/CP949를 선택한다.
 3. 제목·본문·섹션·작성자·작성일·원문 링크·첨부·ID 열을 확인한다. 첨부 ZIP/개별 파일을 선택하고 **열 연결 적용 · 가져오기**를 누른다.
 4. 검색·섹션·유형 필터·선택 제외를 사용한다. 동일 이름 첨부는 ambiguous로 남는다. 상세의 파일 선택으로 수동 연결한다. 미연결 파일도 별도 목록과 출력 폴더에 남는다.

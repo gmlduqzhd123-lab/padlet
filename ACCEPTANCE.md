@@ -1,5 +1,7 @@
 # 완료 검수표
 
+2026-10-09 공개 배포 검수: AC-01 PASS (공개 URL HTTP 200/상대경로 자산/Worker), 공개 출처에서 가상 CSV/XLSX·첨부 ZIP과 독립 ZIP 해제 PASS. API 키 없는 경로 원격 요청 0. AC-19 실제 인증 API는 여전히 NOT_RUN. docs/DEPLOYMENT_REPORT.md 참조.
+
 2026-10-09 연결 안내 회귀: 주소 확인/키 미입력 시 원격 요청 0, API 패널 펼침·키 포커스, 실제 요청 후 현재 출처 한정 성공 또는 공급자 오류 표시를 가상 API로 검수했다. 27개 API mock/39개 로컬 PASS. 실제 연결은 NOT_RUN. [기록](docs/CONNECTION_UX_REPORT.md).
 
 T-02 후속 구현/검수는 [docs/T02_REPORT.md](docs/T02_REPORT.md)를 참고한다. 로컬 39개와 API 가상 24개 통과를 실제 패들렛 계정/호스트 검증으로 해석하지 않는다. AC-19는 NOT_RUN이다.

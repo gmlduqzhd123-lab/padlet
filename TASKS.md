@@ -1,5 +1,7 @@
 # 구현 작업 목록
 
+2026-10-09 사용자 배포 요청 수행: 원격 main 기록을 이어 커밋 6ce5de5 전송, Pages build/deploy 성공, 공개 출처 가상 시험 5개 PASS. 이후 문서 배포 전 표현은 당시 기록이다. docs/DEPLOYMENT_REPORT.md 참조. 실제 API 인증·첨부 시험은 NOT_RUN이다.
+
 2026-10-09 연결 안내 수정 완료: 주소 확인과 API 검사를 분리하고 키 없는 경우 안내/로컬 이동을 제공한다. API mock 27개·로컬 39개 PASS, 공개 반영 및 실제 인증 API 시험은 미수행. docs/CONNECTION_UX_REPORT.md 참조.
 
 2026-10-08 T-00 진단 및 T-01 로컬 MVP 구현/가상 시험 완료. 실제 계정·Pages·OS 폴더 승인은 NOT_RUN이다. 체크는 구현과 기록 완료이며 실연동 검증 완료를 뜻하지 않는다. 자세한 시험 수준은 docs/TEST_REPORT.md와 docs/FEASIBILITY.md를 따른다.

@@ -1,5 +1,7 @@
 # 연결 안내 검수 · 2026-10-09
 
+후속 배포 완료: 커밋 6ce5de5를 main으로 전송했고 GitHub Pages 배포 성공 및 공개 출처 시험 5개 PASS를 확인했다. 아래 ‘로컬/미배포’ 표현은 배포 요청 전 검수 시점의 기록이다. 현재 상태는 [배포 보고서](DEPLOYMENT_REPORT.md)를 따른다.
+
 사용자 화면의 기존 버튼은 URL만 해석하면서 API 자격·관리자 권한·CORS·첨부에 모두 ‘미검증’을 표시했다. 요청 실패와 검사 미실행을 혼동하는 안내를 수정했다. 이번 변경은 로컬이며 공개 Pages에 배포하지 않았다.
 
 변경 파일: index.html, assets/js/app.js, tests/api.cjs, README.md, PRD.md, TASKS.md, ACCEPTANCE.md, docs/FEASIBILITY.md, 이 보고서.
