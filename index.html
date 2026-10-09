@@ -8,16 +8,44 @@
       content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src 'self' https://api.padlet.dev https://cdn.padlet.dev; object-src 'none'; base-uri 'none'; form-action 'none'"
     />
     <title>엽쌤의 패들렛 정리함</title>
+    <meta name="description" content="패들렛 게시물과 첨부 파일을 한곳에 모아 정리하고 폴더·ZIP으로 저장하는 도구" />
+    <!-- 링크 공유 미리보기 (카카오톡·문자 등) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="엽쌤스쿨" />
+    <meta property="og:title" content="엽쌤의 패들렛 정리함" />
+    <meta property="og:description" content="패들렛에 모은 자료를 내 폴더에 차곡차곡 · 게시물·첨부를 한곳에 정리하고 폴더·ZIP으로 저장" />
+    <meta property="og:url" content="https://gmlduqzhd123-lab.github.io/padlet/" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:image" content="https://gmlduqzhd123-lab.github.io/padlet/og-image.jpg" />
+    <meta property="og:image:secure_url" content="https://gmlduqzhd123-lab.github.io/padlet/og-image.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="엽쌤의 패들렛 정리함" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://gmlduqzhd123-lab.github.io/padlet/og-image.jpg" />
+    <!-- 앱 설치(홈 화면에 추가). 서비스 워커·오프라인 저장은 사용하지 않는다. -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0f766e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="패들렛 정리함" />
     <link rel="stylesheet" href="./assets/css/app.css" />
     <script defer src="./assets/vendor/xlsx-0.20.3.min.js"></script>
     <script defer src="./assets/vendor/fflate-0.8.2.js"></script>
     <script type="module" src="./assets/js/app.js"></script>
+    <script type="module" src="./assets/js/app-install.js"></script>
   </head>
   <body>
     <header>
       <div>
         <b>엽쌤의 패들렛 정리함</b
-        ><span id="modeBadge" class="badge">로컬 가져오기</span>
+        ><span id="modeBadge" class="badge">로컬 가져오기</span
+        ><button id="installApp" type="button" class="install-button">
+          📲 앱 설치
+        </button>
       </div>
       <p>
         자료는 이 탭의 메모리에서 처리합니다. 새로고침 전에 결과를 저장하세요.
@@ -204,7 +232,23 @@
         T-00 / T-01 / T-02 · API 연결은 조건부·실계정 미검증입니다. 핵심 발췌와
         Codex 재창작은 후속 단계입니다.
         <a href="./docs/FEASIBILITY.md">연결 검증 기록</a>
+        <p class="copyright">
+          © 2026 엽쌤. All rights reserved. ·
+          <a href="https://gmlduqzhd123-lab.github.io/YScode/">엽쌤의 다른 앱 보기 →</a>
+        </p>
       </footer>
     </main>
+    <dialog id="installDialog" class="install-dialog" aria-labelledby="installTitle">
+      <h2 id="installTitle">📲 앱으로 설치하기</h2>
+      <p class="install-sub">엽쌤의 패들렛 정리함 · 홈 화면에서 바로 열려요</p>
+      <p data-install-lead></p>
+      <a data-install-external class="install-external" hidden></a>
+      <ol data-install-steps></ol>
+      <p data-install-note class="install-note"></p>
+      <p class="install-note">
+        설치해도 자료는 지금처럼 이 탭의 메모리에서만 처리하며, 인터넷 없이 다시 여는 기능은 제공하지 않아요.
+      </p>
+      <form method="dialog"><button class="install-close">닫기</button></form>
+    </dialog>
   </body>
 </html>
