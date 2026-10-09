@@ -18,6 +18,12 @@ GitHub Pages용 HTML/CSS/Vanilla JavaScript 정적 앱. T-00 진단, T-01 로컬
 
 ES Modules와 Worker를 사용하므로 file://로 index.html을 더블클릭하는 방식은 지원하지 않는다. 사용자에게 로컬 서버 설치를 요구하지 않으며 운영 방식은 GitHub Pages이다. 개발용 자동 시험만 일회성 HTTP 출처를 사용한다.
 
+## 앱 설치·링크 공유
+
+- 상단 `📲 앱 설치`: 크롬·엣지·삼성 인터넷은 설치 창을 띄우고, 아이폰·카카오톡·인앱 브라우저·PC는 기기별 방법을 안내한다(`assets/js/app-install.js`). 안내 문구는 브라우저 정보만 사용한다.
+- `manifest.webmanifest`와 `assets/icons/`의 PNG 4개만 추가했다. 서비스 워커·캐시·지속 저장소는 쓰지 않으며 인터넷 없이 다시 여는 기능은 제공하지 않는다. CSP는 바꾸지 않았다(`default-src 'self'`가 manifest를 허용).
+- 링크 공유 미리보기용 `og-image.jpg`와 Open Graph 태그, 하단 저작권·엽쌤 웹앱 모음(YScode) 링크를 추가했다.
+
 ## 구현 범위
 
 - T-02: API 링크/보드 ID → JSON:API 게시물/섹션 → 공식 첨부정보 해석 → 사용자 후보/지원 호스트 선택 → 별도 파일 바이트 확보 → 폴더/ZIP 저장. 공식 첨부정보 필드는 previewImageUrl/embedCode/poll이며 원본 다운로드 필드는 확인되지 않았다. 게시물 첨부 주소는 원본 미확인 후보로만 취급한다. 현재 파일 후보 호스트는 문서의 업로드 예시에 있는 cdn.padlet.dev만 지원한다. 미리보기용 Google Storage 예시는 다운로드 허용 목록에 추가하지 않았다.

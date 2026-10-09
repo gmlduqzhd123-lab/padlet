@@ -201,3 +201,90 @@ footer {
     width: 100%;
   }
 }
+/* 📲 앱 설치 버튼과 안내 창 */
+header > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+header .install-button {
+  width: auto;
+  margin: 0 0 0 auto;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #0f766e;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+header .install-button:hover {
+  background: #115e59;
+}
+header .install-button[hidden] {
+  display: none;
+}
+.install-dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 22px 20px 18px;
+  border: 1px solid #e1e4ee;
+  border-radius: 16px;
+  color: #172033;
+  word-break: keep-all;
+}
+.install-dialog::backdrop {
+  background: rgba(23, 32, 51, 0.6);
+}
+.install-dialog h2 {
+  font-size: 20px;
+  margin: 0;
+}
+.install-sub {
+  margin: 2px 0 12px;
+  color: #626e83;
+  font-size: 14px;
+}
+.install-dialog ol {
+  padding-left: 22px;
+}
+.install-dialog [hidden] {
+  display: none;
+}
+.install-note {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f1f4f9;
+  color: #626e83;
+  font-size: 14px;
+}
+.install-external,
+.install-close {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 700;
+}
+.install-external {
+  margin-top: 12px;
+  background: #0f766e;
+  color: white;
+  text-decoration: none;
+}
+.install-close {
+  margin-top: 14px;
+}
+footer .copyright {
+  margin: 8px 0 0;
+}
+@media (max-width: 760px) {
+  header .install-button {
+    width: auto;
+    padding: 5px 12px;
+    font-size: 13px;
+  }
+}
