@@ -226,6 +226,31 @@ header .install-button:hover {
 header .install-button[hidden] {
   display: none;
 }
+header .qr-button {
+  margin-left: 6px;
+  background: white;
+  color: #0f766e;
+  border: 1px solid #b7ddd5;
+}
+header .qr-button:hover {
+  background: #effaf7;
+}
+.qr-dialog {
+  text-align: center;
+  width: min(520px, calc(100vw - 32px));
+}
+.qr-image {
+  display: block;
+  width: min(100%, 62vh, 420px);
+  height: auto;
+  margin: 8px auto;
+  image-rendering: pixelated;
+}
+.qr-url {
+  margin: 0 0 4px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  word-break: break-all;
+}
 .install-dialog {
   width: min(440px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);

@@ -37,6 +37,7 @@
     <script defer src="./assets/vendor/fflate-0.8.2.js"></script>
     <script type="module" src="./assets/js/app.js"></script>
     <script type="module" src="./assets/js/app-install.js"></script>
+    <script type="module" src="./assets/js/app-qr.js"></script>
   </head>
   <body>
     <header>
@@ -45,6 +46,9 @@
         ><span id="modeBadge" class="badge">로컬 가져오기</span
         ><button id="installApp" type="button" class="install-button">
           📲 앱 설치
+        </button
+        ><button id="qrApp" type="button" class="install-button qr-button" aria-label="QR 코드로 접속">
+          📱 QR
         </button>
       </div>
       <p>
@@ -238,6 +242,14 @@
         </p>
       </footer>
     </main>
+    <dialog id="qrDialog" class="install-dialog qr-dialog" aria-labelledby="qrTitle">
+      <h2 id="qrTitle">📱 카메라로 찍어서 들어와요</h2>
+      <p class="install-sub">엽쌤의 패들렛 정리함</p>
+      <img class="qr-image" src="./qr.svg" alt="엽쌤의 패들렛 정리함 주소 QR 코드" width="420" height="420" />
+      <p class="qr-url">gmlduqzhd123-lab.github.io/padlet/</p>
+      <p class="install-sub">휴대폰·태블릿 카메라를 QR 코드에 비추면 바로 열려요.</p>
+      <form method="dialog"><button class="install-close">닫기</button></form>
+    </dialog>
     <dialog id="installDialog" class="install-dialog" aria-labelledby="installTitle">
       <h2 id="installTitle">📲 앱으로 설치하기</h2>
       <p class="install-sub">엽쌤의 패들렛 정리함 · 홈 화면에서 바로 열려요</p>
