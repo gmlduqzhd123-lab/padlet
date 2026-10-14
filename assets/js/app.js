@@ -15,6 +15,28 @@ import { downloadAttachments, attachmentUrl } from "./attachment-download.js";
 import { createApiSession } from "./api-session.js";
 const apiSession = createApiSession();
 const $ = (id) => document.getElementById(id);
+const stepLinks = [...document.querySelectorAll(".nav-item")];
+function updateStepNavigation() {
+  const sections = ["collect", "materials", "organize", "save"];
+  let current = "collect";
+  for (const id of sections)
+    if ($(id).getBoundingClientRect().top <= innerHeight * 0.35) current = id;
+  if (scrollY + innerHeight >= document.documentElement.scrollHeight - 4) current = "save";
+  for (const link of stepLinks) {
+    const selected = link.hash === `#${current}`;
+    link.classList.toggle("active", selected);
+    if (selected) link.setAttribute("aria-current", "step");
+    else link.removeAttribute("aria-current");
+  }
+}
+let navigationFrame = null;
+window.addEventListener("scroll", () => {
+  if (navigationFrame !== null) return;
+  navigationFrame = requestAnimationFrame(() => {
+    navigationFrame = null;
+    updateStepNavigation();
+  });
+}, { passive: true });
 let table = null,
   project = null,
   assets = [],
@@ -515,7 +537,7 @@ function render() {
     )
       continue;
     const card = node("div");
-    card.className = "post";
+    card.className = "post" + (p.id === active ? " active" : "");
     const label = node("label"),
       c = node("input");
     c.type = "checkbox";
@@ -529,6 +551,8 @@ function render() {
     const b = node("button", p.titleOriginal || "[제목 없음]");
     b.onclick = () => {
       active = p.id;
+      for (const item of $("posts").children) item.classList.remove("active");
+      card.classList.add("active");
       renderDetail();
     };
     card.append(
@@ -542,6 +566,8 @@ function render() {
     );
     $("posts").append(card);
   }
+  if (!$("posts").children.length)
+    $("posts").append(node("p", "조건에 맞는 게시물이 없습니다. 검색이나 필터를 변경하세요."));
   renderDetail();
   const selected = project.posts.filter((x) => x.selected);
   text(

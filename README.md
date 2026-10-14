@@ -63,3 +63,7 @@ ES Modules와 Worker를 사용하므로 file://로 index.html을 더블클릭하
 `node tests/run.cjs` — Codex에 묶인 Playwright와 설치된 Chrome을 사용한다. 다른 개발 환경에서는 tests/run.cjs의 Playwright 경로를 변경한다. 앱의 필수 실행 의존성은 아니다. 시험은 localhost의 /repo/ 하위 경로를 열고 종료한다.
 
 tests/fixtures에는 생성한 가상 CSV/XLSX/ZIP만 있다. 결과 ZIP·스크린샷·실행 기록은 Git에서 제외한 test-results에 생성된다. 사용자 자료는 저장소 밖에 보관한다.
+
+## 아카이브 서재 디자인 · 2026-10-15
+
+사용자 선택 1안의 크림·세이지 화면, 단계 메뉴, 원문/정리본 비교와 저장 결과를 제공한다. 앱 설치·QR 안내는 유지한다. 로컬 회귀 39개·가상 API 47개·디자인 8개 PASS. 공개 배포와 미검증 범위는 docs/DESIGN_A_DEPLOYMENT_REPORT.md 참조.
