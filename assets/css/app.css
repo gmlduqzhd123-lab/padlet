@@ -450,3 +450,24 @@ footer .copyright {
 .install-dialog { background: #fffefa; color: #30382f; border-color: #e3e4d9; }
 .install-note { background: #edf1e6; color: #626d5d; }
 @media (max-width:760px) { .utility > div { gap:6px; } .utility b { font-size:13px; } .utility .install-button { font-size:12px; padding:5px 9px; min-height:36px; } }
+/* 📱 휴대폰: 앱 설치·QR을 화면 맨 윗줄(정리함 이름 오른쪽)에 둔다 */
+.utility-key { display: contents; }
+@media (max-width: 760px) {
+  body { position: relative; }
+  .sidebar { padding-right: 150px; }
+  .sidebar nav { margin-right: -132px; }
+  .utility .utility-key { position: absolute; top: 20px; right: 18px; display: flex; gap: 6px; }
+  .utility .utility-key .install-button { margin: 0; }
+  .install-wide { display: none; }
+}
+@media (max-width: 360px) {
+  .sidebar { padding-left: 14px; padding-right: 140px; }
+  .sidebar nav { margin-right: -126px; }
+  .brand { gap: 8px; }
+  .brand strong { font-size: 15px; }
+  .utility .utility-key { right: 14px; gap: 4px; }
+  .utility .utility-key .install-button { padding: 5px 8px; }
+}
+@media (max-width: 340px) {
+  .brand-mark { display: none; }
+}
