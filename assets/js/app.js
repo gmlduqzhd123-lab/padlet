@@ -13,45 +13,124 @@ import { createApiClient } from "./api-client.js";
 import { collectBoard, collectAttachmentInfo } from "./api-collection.js";
 import { downloadAttachments, attachmentUrl } from "./attachment-download.js";
 import { createApiSession } from "./api-session.js";
+
 const apiSession = createApiSession();
 const $ = (id) => document.getElementById(id);
 const stepLinks = [...document.querySelectorAll(".nav-item")];
-function updateStepNavigation() {
-  const sections = ["collect", "materials", "organize", "save"];
-  let current = "collect";
-  for (const id of sections)
-    if ($(id).getBoundingClientRect().top <= innerHeight * 0.35) current = id;
-  if (scrollY + innerHeight >= document.documentElement.scrollHeight - 4) current = "save";
+let pinnedStep = null;
+let pinnedTimer = null;
+
+function setActiveStep(stepId) {
   for (const link of stepLinks) {
-    const selected = link.hash === `#${current}`;
+    const selected = link.hash === `#${stepId}`;
     link.classList.toggle("active", selected);
     if (selected) link.setAttribute("aria-current", "step");
     else link.removeAttribute("aria-current");
   }
 }
-let navigationFrame = null;
-window.addEventListener("scroll", () => {
-  if (navigationFrame !== null) return;
-  navigationFrame = requestAnimationFrame(() => {
-    navigationFrame = null;
-    updateStepNavigation();
+
+function updateStepNavigation() {
+  if (pinnedStep) {
+    setActiveStep(pinnedStep);
+    return;
+  }
+  const sections = ["collect", "materials", "organize", "save"];
+  let current = "collect";
+  for (const id of sections) {
+    const el = $(id);
+    if (el && el.getBoundingClientRect().top <= innerHeight * 0.4) current = id;
+  }
+  if (scrollY + innerHeight >= document.documentElement.scrollHeight - 8)
+    current = "save";
+  setActiveStep(current);
+}
+
+for (const link of stepLinks) {
+  link.addEventListener("click", () => {
+    const target = link.hash.replace("#", "");
+    if (!target) return;
+    pinnedStep = target;
+    setActiveStep(target);
+    clearTimeout(pinnedTimer);
+    pinnedTimer = setTimeout(() => {
+      pinnedStep = null;
+    }, 900);
   });
-}, { passive: true });
+}
+
+let navigationFrame = null;
+window.addEventListener(
+  "scroll",
+  () => {
+    if (navigationFrame !== null) return;
+    navigationFrame = requestAnimationFrame(() => {
+      navigationFrame = null;
+      updateStepNavigation();
+    });
+  },
+  { passive: true },
+);
+
+// Step 1 Mode Switcher (Import vs Collect vs Both)
+const routeTabs = [...document.querySelectorAll(".route-tab")];
+function setRouteMode(mode) {
+  const container = $("step1Container");
+  if (container) container.dataset.view = mode;
+  for (const tab of routeTabs) {
+    tab.classList.toggle("active", tab.dataset.mode === mode);
+  }
+  $("import")?.classList.toggle("card-focused", mode === "import");
+  $("collect")?.classList.toggle("card-focused", mode === "collect");
+}
+for (const tab of routeTabs) {
+  tab.addEventListener("click", () => {
+    setRouteMode(tab.dataset.mode || "both");
+  });
+}
+if ($("localImportLink")) {
+  $("localImportLink").addEventListener("click", () => setRouteMode("import"));
+}
+
 let table = null,
   project = null,
   assets = [],
   active = null,
   controller = null,
-  busy = false;
+  busy = false,
+  quickFilter = "all",
+  detailViewMode = "organized";
 let remoteUrls = new Map(),
   approvedHosts = new Map();
+
+function formatPostOrganized(p) {
+  const lines = [];
+  lines.push(`제목: ${p.titleOriginal || "[제목 없음]"}`);
+  if ($("showAuthor")?.checked) {
+    lines.push(`작성자: ${p.authorOriginal || "원본에 정보 없음"}`);
+  }
+  if ($("showDate")?.checked) {
+    lines.push(`작성일: ${p.createdAtOriginal || "원본에 정보 없음"}`);
+  }
+  if (p.sourceUrl) {
+    lines.push(`원문 링크: ${p.sourceUrl}`);
+  }
+  lines.push("");
+  const cleaned = String(p.bodyPlain || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  lines.push(cleaned || "[본문 없음]");
+  return lines.join("\n");
+}
+
 function installProject(next, nextAssets = []) {
   project = next;
   assets = nextAssets;
   active = project.posts[0]?.id;
   approvedHosts = new Map();
+  quickFilter = "all";
   $("confirmSave").checked = false;
-  $("sectionFilter").replaceChildren(node("option", "모든 섹션"));
+  $("sectionFilter").replaceChildren(node("option", "📂 모든 섹션"));
   $("sectionFilter").firstChild.value = "";
   for (const s of project.sections) {
     const o = node("option", s.name || "섹션 없음");
@@ -61,8 +140,10 @@ function installProject(next, nextAssets = []) {
   $("search").value = "";
   $("typeFilter").value = "";
   text("saveResult", "새 자료 가져옴 · 실제 저장 확인 0개");
+  document.body.classList.add("has-project");
   render();
 }
+
 function apiProgress(progress) {
   if (progress.phase === "waiting")
     text(
@@ -80,8 +161,10 @@ function apiProgress(progress) {
       `${progress.id || ""} · ${progress.status || "받은 바이트 " + (progress.bytes ?? 0)}`,
     );
 }
+
 function setRemoteBusy(value) {
   busy = value;
+  document.body.classList.toggle("is-busy", value);
   for (const id of [
     "collectApi",
     "downloadRemote",
@@ -120,6 +203,7 @@ function setRemoteBusy(value) {
   }
   $("sheet").disabled = value || !table || table.sheets.length < 2;
 }
+
 async function importApi() {
   if (busy) return;
   try {
@@ -195,6 +279,7 @@ async function importApi() {
     setRemoteBusy(false);
   }
 }
+
 $("collectApi").onclick = importApi;
 $("stopRemote").onclick = () => controller?.abort();
 $("downloadRemote").onclick = async () => {
@@ -223,11 +308,16 @@ $("downloadRemote").onclick = async () => {
     setRemoteBusy(false);
   }
 };
+
 $("dataFile").disabled = true;
 startWorker(() => {
   $("dataFile").disabled = busy;
 });
-const text = (id, s) => ($(id).textContent = s);
+
+const text = (id, s) => {
+  const el = $(id);
+  if (el) el.textContent = s;
+};
 const node = (tag, s) => {
   const n = document.createElement(tag);
   if (s !== undefined) n.textContent = s;
@@ -247,6 +337,7 @@ function capabilities() {
   );
 }
 capabilities();
+
 function requireApiKey() {
   if ($("apiKey").value.trim()) {
     apiSession.set($("apiKey").value);
@@ -267,6 +358,7 @@ function requireApiKey() {
   $("apiKey").focus();
   return false;
 }
+
 $("diagnose").onclick = () => {
   try {
     const b = parseBoardUrl($("boardUrl").value);
@@ -288,6 +380,7 @@ $("diagnose").onclick = () => {
     text("diagnosis", e.message);
   }
 };
+
 async function diagnoseApi(type) {
   if (busy) return;
   if (!requireApiKey()) return;
@@ -329,6 +422,7 @@ async function diagnoseApi(type) {
     setRemoteBusy(false);
   }
 }
+
 $("apiBoard").onclick = () => diagnoseApi("board");
 $("apiAttachment").onclick = () => diagnoseApi("attachment");
 $("clearKey").onclick = () => {
@@ -343,6 +437,7 @@ $("clearKey").onclick = () => {
     "연결 해제 · 요청 취소 · 키 지움 · 확보한 자료는 유지됩니다.",
   );
 };
+
 $("addLocalAssets").onclick = async () => {
   if (busy) return;
   if (!project) {
@@ -380,6 +475,7 @@ $("addLocalAssets").onclick = async () => {
     setRemoteBusy(false);
   }
 };
+
 $("cancel").onclick = () => controller?.abort();
 $("cancelLocal").onclick = () => {
   if (!busy || controller) return;
@@ -388,6 +484,7 @@ $("cancelLocal").onclick = () => {
     $("dataFile").disabled = busy;
   });
 };
+
 function mapping() {
   const sheet = table.sheets[Number($("sheet").value)];
   const headers = sheet.rows[0] || [];
@@ -409,8 +506,12 @@ function mapping() {
     l.append(s);
     $("mapping").append(l);
   }
+  if ($("importOptions") && (map.body === -1 || table.sheets.length > 1)) {
+    $("importOptions").open = true;
+  }
   $("importButton").disabled = false;
 }
+
 $("dataFile").onchange = async () => {
   if (busy) return;
   const file = $("dataFile").files[0];
@@ -429,7 +530,7 @@ $("dataFile").onchange = async () => {
     mapping();
     text(
       "importStatus",
-      "파일 읽기 완료 · 시트와 열 연결을 확인하세요. 아직 가져오기를 적용하지 않았습니다.",
+      `파일 읽기 완료 (${file.name}) · 시트와 열 연결이 자동 설정되었습니다. ‘열 연결 적용 · 바로 정리하기’를 누르세요.`,
     );
   } catch (e) {
     table = null;
@@ -439,12 +540,13 @@ $("dataFile").onchange = async () => {
     setRemoteBusy(false);
   }
 };
+
 $("encoding").onchange = () => $("dataFile").onchange();
 $("sheet").onchange = mapping;
-$("importButton").onclick = async () => {
+
+async function executeLocalImport() {
   if (busy) return;
   if (!table) return;
-  const button = $("importButton");
   setRemoteBusy(true);
   try {
     const nextAssets = await localTask("readAssets", [
@@ -459,15 +561,17 @@ $("importButton").onclick = async () => {
     approvedHosts = new Map();
     project = next;
     active = project.posts[0]?.id;
+    quickFilter = "all";
     $("confirmSave").checked = false;
     text("saveResult", "새 자료 가져옴 · 실제 저장 확인 0개");
-    $("sectionFilter").replaceChildren(node("option", "모든 섹션"));
+    $("sectionFilter").replaceChildren(node("option", "📂 모든 섹션"));
     $("sectionFilter").firstChild.value = "";
     for (const s of project.sections) {
       const o = node("option", s.name || "섹션 없음");
       o.value = s.id;
       $("sectionFilter").append(o);
     }
+    document.body.classList.add("has-project");
     render();
     text(
       "importStatus",
@@ -478,10 +582,82 @@ $("importButton").onclick = async () => {
   } finally {
     setRemoteBusy(false);
   }
-};
+}
+
+$("importButton").onclick = executeLocalImport;
+
+// Idea 3: Unified Drag & Drop Upload Box (#dropZone)
+const dropZone = $("dropZone");
+if (dropZone) {
+  dropZone.addEventListener("click", () => {
+    if (!busy && !$("dataFile").disabled) $("dataFile").click();
+  });
+  dropZone.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && !busy && !$("dataFile").disabled) {
+      e.preventDefault();
+      $("dataFile").click();
+    }
+  });
+  for (const evt of ["dragenter", "dragover"]) {
+    dropZone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      if (!busy) dropZone.classList.add("drag-over");
+    });
+  }
+  for (const evt of ["dragleave", "drop"]) {
+    dropZone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("drag-over");
+    });
+  }
+  dropZone.addEventListener("drop", async (e) => {
+    if (busy || $("dataFile").disabled) return;
+    const dropped = [...(e.dataTransfer?.files || [])];
+    if (!dropped.length) return;
+    const dataCandidates = dropped.filter((f) =>
+      /\.(csv|xlsx|json)$/i.test(f.name),
+    );
+    const attachCandidates = dropped.filter(
+      (f) => !/\.(csv|xlsx|json)$/i.test(f.name),
+    );
+    if (dataCandidates.length) {
+      const dt = new DataTransfer();
+      dt.items.add(dataCandidates[0]);
+      $("dataFile").files = dt.files;
+    }
+    if (attachCandidates.length) {
+      const dt = new DataTransfer();
+      for (const f of attachCandidates) dt.items.add(f);
+      $("attachments").files = dt.files;
+    }
+    if ($("dataFile").files.length) {
+      await $("dataFile").onchange();
+      if (table && !$("importButton").disabled) {
+        await executeLocalImport();
+      }
+    }
+  });
+}
+
+// Idea 8: Dashboard Summary Card Click Quick Filters
+for (const card of document.querySelectorAll(".metric-card")) {
+  card.addEventListener("click", () => {
+    if (!project) return;
+    const mode = card.dataset.quickFilter || "all";
+    quickFilter = mode;
+    if (mode === "unresolved") {
+      $("typeFilter").value = "unresolved";
+    } else if ($("typeFilter").value === "unresolved") {
+      $("typeFilter").value = "";
+    }
+    render();
+  });
+}
+
 function options() {
   return { author: $("showAuthor").checked, date: $("showDate").checked };
 }
+
 function render() {
   if (!project) return;
   const basis =
@@ -508,20 +684,43 @@ function render() {
     "stats",
     `${basis} · 가져옴 ${stats.postsObserved} · 선택 ${stats.postsSelected} · 본문 ${stats.textProcessed} · 첨부 참조 ${stats.attachmentReferences} · 서로 다른 확보 파일 ${stats.uniqueAssets} · 링크만 ${stats.externalLinks} · 미확보 ${stats.unresolved}`,
   );
+
+  // Update 4 Summary Dashboard Metric Cards
+  text("metricTotal", String(stats.postsObserved));
+  text("metricSelected", String(stats.postsSelected));
+  text("metricAssets", String(stats.uniqueAssets));
+  text("metricUnresolved", String(stats.unresolved));
+  for (const card of document.querySelectorAll(".metric-card")) {
+    const isUnresolvedFilter = $("typeFilter").value === "unresolved";
+    const cardMode = card.dataset.quickFilter;
+    const isActive = isUnresolvedFilter
+      ? cardMode === "unresolved"
+      : quickFilter === cardMode;
+    card.classList.toggle("active", isActive);
+  }
+
+  const unlinkedList = assets
+    .filter((f) => !project.attachments.some((a) => a.assetId === f.id))
+    .map((f) => f.input + " / " + f.path);
   text(
     "unlinked",
-    "미연결 파일: " +
-      assets
-        .filter((f) => !project.attachments.some((a) => a.assetId === f.id))
-        .map((f) => f.input + " / " + f.path)
-        .join(" · "),
+    unlinkedList.length
+      ? "미연결 파일: " + unlinkedList.join(" · ")
+      : "미연결 파일: 없음",
   );
+
   $("posts").replaceChildren();
   const q = $("search").value.toLowerCase(),
     section = $("sectionFilter").value,
     type = $("typeFilter").value;
+
   for (const p of project.posts) {
     const refs = project.attachments.filter((a) => a.postIds.includes(p.id));
+    const hasUnresolved = refs.some(
+      (a) => !a.assetId && a.status !== "linked_only",
+    );
+    const hasResolvedAsset = refs.some((a) => !!a.assetId);
+
     if (
       (section && p.sectionId !== section) ||
       (q &&
@@ -529,15 +728,23 @@ function render() {
           .toLowerCase()
           .includes(q)) ||
       (type === "body" && !p.bodyOriginal) ||
-      (type === "unresolved" &&
-        !refs.some((a) => !a.assetId && a.status !== "linked_only")) ||
+      (type === "unresolved" && !hasUnresolved) ||
       (type &&
         !["body", "unresolved"].includes(type) &&
-        !refs.some((a) => a.mediaKind === type))
+        !refs.some((a) => a.mediaKind === type)) ||
+      (quickFilter === "selected" && !p.selected) ||
+      (quickFilter === "assets" && !hasResolvedAsset)
     )
       continue;
+
     const card = node("div");
     card.className = "post" + (p.id === active ? " active" : "");
+    card.dataset.status = hasUnresolved
+      ? "unresolved"
+      : refs.length
+        ? "resolved"
+        : "text";
+
     const label = node("label"),
       c = node("input");
     c.type = "checkbox";
@@ -548,26 +755,39 @@ function render() {
       render();
     };
     label.append(c, document.createTextNode(" " + p.id + " 포함"));
+
     const b = node("button", p.titleOriginal || "[제목 없음]");
+    b.type = "button";
     b.onclick = () => {
       active = p.id;
       for (const item of $("posts").children) item.classList.remove("active");
       card.classList.add("active");
       renderDetail();
     };
+
+    const sectionName =
+      project.sections.find((s) => s.id === p.sectionId)?.name || "섹션 없음";
+    const attachStatus = hasUnresolved
+      ? `⚠️ 미확보 포함 (첨부 ${refs.length})`
+      : refs.length
+        ? `📎 첨부 ${refs.length}`
+        : "📄 글만 있음";
+
     card.append(
       label,
       b,
-      node("p", p.bodyPlain.slice(0, 90)),
-      node(
-        "small",
-        `첨부 ${refs.length} · ${project.sections.find((s) => s.id === p.sectionId)?.name || "섹션 없음"}`,
-      ),
+      node("p", p.bodyPlain ? p.bodyPlain.slice(0, 90) : "[본문 없음]"),
+      node("small", `${attachStatus} · ${sectionName}`),
     );
     $("posts").append(card);
   }
   if (!$("posts").children.length)
-    $("posts").append(node("p", "조건에 맞는 게시물이 없습니다. 검색이나 필터를 변경하세요."));
+    $("posts").append(
+      node(
+        "p",
+        "조건에 맞는 게시물이 없습니다. 검색이나 필터를 변경하세요.",
+      ),
+    );
   renderDetail();
   const selected = project.posts.filter((x) => x.selected);
   text(
@@ -580,30 +800,98 @@ function render() {
     new TextDecoder().decode(docs.get("02_줄글정리/전체_글모음.txt")),
   );
 }
+
 function renderDetail() {
   const p = project?.posts.find((x) => x.id === active);
   $("detail").replaceChildren();
   if (!p) return;
-  $("detail").append(
-    node("h3", p.titleOriginal || "[제목 없음]"),
-    node("pre", p.bodyPlain || "[본문 없음]"),
-    node(
-      "p",
-      `원문 위치: ${p.provenance.sourceFile} / ${p.provenance.sheet} / 행 ${p.provenance.row}`,
-    ),
-    node("p", p.warnings.join("\n")),
+
+  const sectionName =
+    project.sections.find((s) => s.id === p.sectionId)?.name || "섹션 없음";
+
+  // Top meta & view toggle tabs (using span[role=button] to preserve exact button/input selectors in #detail)
+  const headBar = node("div");
+  headBar.className = "detail-head-bar";
+  const badge = node("span", `📂 ${sectionName} · ${p.id}`);
+  badge.className = "detail-section-badge";
+
+  const viewSwitch = node("div");
+  viewSwitch.className = "detail-view-switch";
+  const tabOrg = node("span", "✨ 정리본 보기");
+  tabOrg.className =
+    "view-pill" + (detailViewMode === "organized" ? " active" : "");
+  tabOrg.setAttribute("role", "button");
+  tabOrg.tabIndex = 0;
+  const tabOrig = node("span", "📄 원문 보기");
+  tabOrig.className =
+    "view-pill" + (detailViewMode === "original" ? " active" : "");
+  tabOrig.setAttribute("role", "button");
+  tabOrig.tabIndex = 0;
+
+  tabOrg.onclick = () => {
+    detailViewMode = "organized";
+    renderDetail();
+  };
+  tabOrig.onclick = () => {
+    detailViewMode = "original";
+    renderDetail();
+  };
+  viewSwitch.append(tabOrg, tabOrig);
+  headBar.append(badge, viewSwitch);
+
+  const bodyText =
+    detailViewMode === "organized"
+      ? formatPostOrganized(p)
+      : p.bodyPlain || "[본문 없음]";
+
+  const provenanceP = node(
+    "p",
+    `원문 위치: ${p.provenance.sourceFile} / ${p.provenance.sheet} / 행 ${p.provenance.row}`,
   );
+  provenanceP.className = "detail-provenance";
+
+  const warnP = node("p", p.warnings.join("\n"));
+  warnP.className = "detail-warnings";
+
+  $("detail").append(
+    headBar,
+    node("h3", p.titleOriginal || "[제목 없음]"),
+    node("pre", bodyText),
+    provenanceP,
+    warnP,
+  );
+
   if (safeUrl(p.sourceUrl)) {
-    const a = node("a", "원문 링크 열기 (사용자 동작)");
+    const a = node("a", "🔗 원문 링크 열기 (사용자 동작)");
+    a.className = "detail-source-link";
     a.href = safeUrl(p.sourceUrl);
     a.target = "_blank";
     a.rel = "noopener noreferrer";
     $("detail").append(a);
   }
-  for (const a of project.attachments.filter((x) => x.postIds.includes(p.id))) {
+
+  const postAttachments = project.attachments.filter((x) =>
+    x.postIds.includes(p.id),
+  );
+  if (postAttachments.length) {
+    const attachHeading = node("h4", `📎 연결된 첨부 자료 (${postAttachments.length}개)`);
+    attachHeading.className = "detail-attach-heading";
+    $("detail").append(attachHeading);
+  }
+
+  for (const a of postAttachments) {
     const d = node("div");
     d.className = "attachment";
-    if (a.failure) d.append(node("p", a.failure.message));
+    d.dataset.status = a.assetId
+      ? "resolved"
+      : a.status === "linked_only"
+        ? "linked"
+        : "unresolved";
+    if (a.failure) {
+      const failP = node("p", a.failure.message);
+      failP.className = "attach-failure";
+      d.append(failP);
+    }
     if (a.originalStatus)
       d.append(
         node(
@@ -670,6 +958,7 @@ function renderDetail() {
     $("detail").append(d);
   }
 }
+
 for (const id of [
   "search",
   "sectionFilter",
@@ -678,6 +967,7 @@ for (const id of [
   "showDate",
 ])
   $(id).oninput = render;
+
 for (const [id, selected] of [
   ["selectAll", true],
   ["selectNone", false],
@@ -687,12 +977,14 @@ for (const [id, selected] of [
     $("confirmSave").checked = false;
     render();
   };
+
 function checkSave() {
   if (!project || !project.posts.some((p) => p.selected))
     throw Error("먼저 게시물을 가져와 선택하세요.");
   if (!$("confirmSave").checked)
     throw Error("선택 자료와 개인정보 확인란을 체크하세요.");
 }
+
 $("saveZip").onclick = () => {
   if (busy) return;
   setRemoteBusy(true);
@@ -724,6 +1016,7 @@ $("saveZip").onclick = () => {
     setRemoteBusy(false);
   }
 };
+
 $("saveFolder").onclick = async () => {
   if (busy) return;
   setRemoteBusy(true);
@@ -753,6 +1046,7 @@ $("saveFolder").onclick = async () => {
     setRemoteBusy(false);
   }
 };
+
 window.addEventListener("beforeunload", (e) => {
   if (project) {
     e.preventDefault();
