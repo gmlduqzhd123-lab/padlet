@@ -37,7 +37,7 @@ function updateStepNavigation() {
   const sections = ["collect", "materials", "organize", "save"];
   let current = "collect";
   for (const id of sections) {
-    const el = $(id);
+    const el = id === "collect" ? $("import") || $(id) : $(id);
     if (el && el.getBoundingClientRect().top <= innerHeight * 0.4) current = id;
   }
   if (scrollY + innerHeight >= document.documentElement.scrollHeight - 8)

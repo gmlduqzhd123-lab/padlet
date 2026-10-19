@@ -79,25 +79,25 @@
     </header>
 
     <main>
-      <!-- 슬림 인트로 & 가져오기 방식 스위치 (Idea 2 & Idea 4) -->
+      <!-- 슬림 인트로 -->
       <div class="intro-bar">
         <div class="intro-copy">
           <h1>흩어진 패들렛 자료를 한 번에 정리하세요</h1>
-          <p>모든 작업은 이 브라우저 탭에서만 안전하게 처리됩니다. 파일을 올리거나 링크를 입력해 바로 시작하세요.</p>
+          <p>모든 작업은 이 브라우저 탭에서만 안전하게 처리됩니다. 패들렛에서 내보낸 파일과 첨부 ZIP을 올려 바로 시작하세요.</p>
         </div>
-        <div class="route-links" role="tablist" aria-label="자료 가져오기 방법">
+        <div class="route-links" role="tablist" aria-label="자료 가져오기 방법" hidden>
           <a href="#import" id="tabImportBtn" class="route-tab active" data-mode="import">📁 내보낸 파일로 정리 <span>추천</span></a>
           <a href="#collect" id="tabCollectBtn" class="route-tab" data-mode="collect">🔗 패들렛 링크로 가져오기 <span>API</span></a>
           <button type="button" id="tabBothBtn" class="route-tab route-tab-all" data-mode="both">한눈에 모두 보기</button>
         </div>
       </div>
 
-      <!-- STEP 1: 자료 가져오기 (파일 업로드 & 패들렛 링크 2열 통합 카드) -->
-      <div class="step1-grid" id="step1Container" data-view="both">
-        <!-- 1-A. 내보낸 파일로 정리하기 (드래그 앤 드롭 원클릭 박스 포함) -->
+      <!-- STEP 1: 자료 가져오기 (내보낸 파일로 정리하기 단독 표시, 링크 가져오기는 숨김) -->
+      <div class="step1-grid single-col" id="step1Container" data-view="import">
+        <!-- 1. 내보낸 파일로 정리하기 (드래그 앤 드롭 원클릭 박스 포함) -->
         <section id="import" class="card import-card">
           <div class="card-head">
-            <span class="step-pill">방법 A · 키 없이 바로 사용</span>
+            <span class="step-pill">STEP 1 · 자료 업로드</span>
             <h2>📁 내보낸 파일로 정리하기</h2>
             <p>패들렛에서 내보낸 엑셀(XLSX)·CSV·JSON 파일과 첨부 ZIP을 올리면 자동으로 정리합니다.</p>
           </div>
@@ -146,8 +146,8 @@
           <p id="importStatus" class="status-banner" aria-live="polite"></p>
         </section>
 
-        <!-- 1-B. 패들렛 링크로 가져오기 -->
-        <section id="collect" class="card collect-card">
+        <!-- 1-B. 패들렛 링크로 가져오기 (숨김 처리) -->
+        <section id="collect" class="card collect-card" hidden>
           <div class="card-head">
             <span class="step-pill">방법 B · 공식 API 연결</span>
             <h2>🔗 패들렛 링크로 가져오기</h2>
@@ -281,7 +281,7 @@
 
         <!-- 첨부 추가 확보 도구 (컴팩트 바) -->
         <div id="attachmentTools" class="attachment-toolbar">
-          <div class="attach-tool-group">
+          <div class="attach-tool-group" hidden>
             <span class="tool-badge">원격 첨부</span>
             <button id="downloadRemote" class="secondary sm-btn" type="button">⬇️ 선택한 첨부 후보 확보 / 재시도</button>
           </div>
@@ -299,7 +299,7 @@
           <div id="posts" class="posts-list">
             <p class="empty-state">
               아직 모아 둔 자료가 없습니다.<br />
-              위에서 <strong>파일을 끌어다 놓거나</strong> <strong>패들렛 링크</strong>를 입력해 시작하세요.
+              위에서 <strong>게시물 파일(CSV·XLSX)과 첨부 ZIP</strong>을 끌어다 놓아 시작하세요.
             </p>
           </div>
           <div id="detail" class="detail-pane">

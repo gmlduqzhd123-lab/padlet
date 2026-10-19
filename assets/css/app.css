@@ -320,13 +320,17 @@ main {
   box-shadow: var(--shadow-sm);
 }
 
-/* STEP 1: 2열 통합 가져오기 그리드 */
+/* STEP 1: 통합 가져오기 그리드 */
 .step1-grid {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
   gap: 18px;
   margin-bottom: 20px;
   align-items: start;
+}
+
+.step1-grid.single-col {
+  grid-template-columns: 1fr;
 }
 
 .card {
