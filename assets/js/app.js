@@ -71,26 +71,6 @@ window.addEventListener(
   { passive: true },
 );
 
-// Step 1 Mode Switcher
-const routeTabs = [...document.querySelectorAll(".route-tab")];
-function setRouteMode(mode) {
-  const container = $("step1Container");
-  if (container) container.dataset.view = mode;
-  for (const tab of routeTabs) {
-    tab.classList.toggle("active", tab.dataset.mode === mode);
-  }
-  $("import")?.classList.toggle("card-focused", mode === "import");
-  $("collect")?.classList.toggle("card-focused", mode === "collect");
-}
-for (const tab of routeTabs) {
-  tab.addEventListener("click", () => {
-    setRouteMode(tab.dataset.mode || "both");
-  });
-}
-if ($("localImportLink")) {
-  $("localImportLink").addEventListener("click", () => setRouteMode("import"));
-}
-
 let table = null,
   project = null,
   assets = [],
@@ -100,6 +80,7 @@ let table = null,
   quickFilter = "all",
   detailViewMode = "organized",
   autoImportTimer = null,
+  isSampleMode = false,
   detailBlobUrls = [];
 let remoteUrls = new Map(),
   approvedHosts = new Map();
@@ -154,14 +135,24 @@ function formatPostOrganized(p) {
   return lines.join("\n");
 }
 
-function installProject(next, nextAssets = []) {
+function showResultView() {
+  document.body.classList.add("has-project");
+  if ($("startScreen")) $("startScreen").hidden = true;
+  if ($("resultScreen")) $("resultScreen").hidden = false;
+  if ($("resetProjectBtn")) $("resetProjectBtn").hidden = false;
+  if ($("sampleModePill")) $("sampleModePill").hidden = !isSampleMode;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function installProject(next, nextAssets = [], sampleFlag = false) {
   project = next;
   assets = nextAssets;
+  isSampleMode = sampleFlag;
   active = project.posts[0]?.id;
   approvedHosts = new Map();
   quickFilter = "all";
-  $("confirmSave").checked = true;
-  $("sectionFilter").replaceChildren(node("option", "📂 모든 섹션"));
+  if ($("confirmSave")) $("confirmSave").checked = true;
+  $("sectionFilter").replaceChildren(node("option", "📂 모든 섹션(모둠)"));
   $("sectionFilter").firstChild.value = "";
   for (const s of project.sections) {
     const o = node("option", s.name || "섹션 없음");
@@ -170,10 +161,8 @@ function installProject(next, nextAssets = []) {
   }
   $("search").value = "";
   $("typeFilter").value = "";
-  text("saveResult", "새 자료 가져옴 · 실제 저장 확인 0개");
-  document.body.classList.add("has-project");
-  if ($("resetProjectBtn")) $("resetProjectBtn").hidden = false;
-  if ($("resetWorkspaceBtn")) $("resetWorkspaceBtn").hidden = false;
+  text("saveResult", "");
+  showResultView();
   render();
 }
 
@@ -185,12 +174,15 @@ function resetProject() {
   project = null;
   assets = [];
   active = null;
+  isSampleMode = false;
   quickFilter = "all";
   remoteUrls = new Map();
   approvedHosts = new Map();
   document.body.classList.remove("has-project");
+  if ($("resultScreen")) $("resultScreen").hidden = true;
+  if ($("startScreen")) $("startScreen").hidden = false;
   if ($("resetProjectBtn")) $("resetProjectBtn").hidden = true;
-  if ($("resetWorkspaceBtn")) $("resetWorkspaceBtn").hidden = true;
+  if ($("sampleModePill")) $("sampleModePill").hidden = true;
   if ($("dataFile")) $("dataFile").value = "";
   if ($("attachments")) $("attachments").value = "";
   if ($("supplementalFiles")) $("supplementalFiles").value = "";
@@ -202,7 +194,7 @@ function resetProject() {
   if ($("mapping")) $("mapping").replaceChildren();
   if ($("importOptions")) $("importOptions").open = false;
   if ($("importButton")) $("importButton").disabled = true;
-  text("importStatus", "초기화되었습니다. 새 파일을 선택하거나 예시 체험하기를 눌러보세요.");
+  text("importStatus", "");
   text("modeBadge", "로컬 가져오기");
   text("metricTotal", "0");
   text("metricSelected", "0");
@@ -213,27 +205,24 @@ function resetProject() {
   text("unlinked", "");
   text("original", "");
   text("organized", "");
-  text("saveResult", "실제 저장 확인 0개 · ZIP 생성 0개");
-  $("sectionFilter").replaceChildren(node("option", "📂 모든 섹션"));
+  text("saveResult", "");
+  $("sectionFilter").replaceChildren(node("option", "📂 모든 섹션(모둠)"));
   $("sectionFilter").firstChild.value = "";
   $("search").value = "";
   $("typeFilter").value = "";
-  const emptyPostP = node("p");
-  emptyPostP.className = "empty-state";
-  emptyPostP.textContent =
-    "아직 모아 둔 자료가 없습니다. 위에서 게시물 파일(CSV·XLSX)과 첨부 ZIP을 선택하거나 [✨ 예시 수업 자료로 1초 체험하기]를 눌러보세요.";
-  $("posts").replaceChildren(emptyPostP);
-  const emptyDetailP = node(
-    "p",
-    "👈 왼쪽 목록에서 게시물을 클릭하면 정리본·원문 비교, 글 복사, 첨부 이미지 미리보기를 한눈에 볼 수 있습니다.",
-  );
-  emptyDetailP.className = "empty-detail";
-  $("detail").replaceChildren(emptyDetailP);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 if ($("resetProjectBtn")) $("resetProjectBtn").onclick = resetProject;
 if ($("resetWorkspaceBtn")) $("resetWorkspaceBtn").onclick = resetProject;
+if ($("brandHomeLink")) {
+  $("brandHomeLink").addEventListener("click", (e) => {
+    if (project) {
+      e.preventDefault();
+      resetProject();
+    }
+  });
+}
 
 function apiProgress(progress) {
   if (progress.phase === "waiting")
@@ -262,6 +251,7 @@ function setRemoteBusy(value) {
     "apiBoard",
     "apiAttachment",
     "saveZip",
+    "quickCopyAll",
     "diagnose",
     "boardUrl",
     "boardId",
@@ -423,8 +413,8 @@ function capabilities() {
   text(
     "capability",
     folder
-      ? "폴더 직접 쓰기 지원 감지 · 실제 사용자 승인 필요"
-      : "폴더 직접 쓰기 미지원 · ZIP 다운로드를 사용하세요.",
+      ? "크롬·엣지 브라우저에서 폴더 직접 저장이 가능합니다."
+      : "현재 브라우저는 ZIP 파일 다운로드를 지원합니다.",
   );
 }
 capabilities();
@@ -532,11 +522,11 @@ $("clearKey").onclick = () => {
 $("addLocalAssets").onclick = async () => {
   if (busy) return;
   if (!project) {
-    text("importStatus", "먼저 게시물을 가져오세요.");
+    text("saveResult", "먼저 게시물을 가져오세요.");
     return;
   }
   if (!$("supplementalFiles").files.length) {
-    text("importStatus", "추가할 로컬 첨부를 선택하세요.");
+    text("saveResult", "추가할 첨부파일을 먼저 선택하세요.");
     return;
   }
   setRemoteBusy(true);
@@ -557,11 +547,11 @@ $("addLocalAssets").onclick = async () => {
     $("confirmSave").checked = true;
     render();
     text(
-      "importStatus",
-      `로컬 첨부 ${added.length}개 추가 · 상세의 파일 선택으로 수동 연결하세요. 본문은 유지됩니다.`,
+      "saveResult",
+      `✅ 첨부파일 ${added.length}개가 추가되었습니다. 오른쪽 상세 화면에서 파일을 연결해 주세요.`,
     );
   } catch (error) {
-    announce(error);
+    text("saveResult", error.message || String(error));
   } finally {
     setRemoteBusy(false);
   }
@@ -597,14 +587,13 @@ function mapping() {
     l.append(s);
     $("mapping").append(l);
   }
-  if ($("importOptions") && (map.body === -1 || table.sheets.length > 1)) {
+  if ($("importOptions") && map.body === -1) {
     $("importOptions").open = true;
   }
   $("importButton").disabled = false;
   return map;
 }
 
-// ① 파일 선택 시 버튼 클릭 없이 자동 정리 (180ms 디바운스로 연속 파일 선택과 자동 테스트 모두 호환)
 function scheduleAutoImport() {
   clearTimeout(autoImportTimer);
   autoImportTimer = setTimeout(() => {
@@ -615,7 +604,7 @@ function scheduleAutoImport() {
         executeLocalImport();
       }
     }
-  }, 180);
+  }, 150);
 }
 
 $("dataFile").onchange = async () => {
@@ -635,15 +624,17 @@ $("dataFile").onchange = async () => {
     });
     $("sheet").disabled = table.sheets.length < 2;
     const map = mapping();
-    if ($("exportName") && !$("exportName").value.trim()) {
+    if ($("exportName")) {
       $("exportName").value = file.name.replace(/\.(csv|xlsx|json)$/i, "");
     }
-    text(
-      "importStatus",
-      `파일 읽기 완료 (${file.name}) · 자동으로 열 연결 및 정리를 반영합니다.`,
-    );
     if (map.body !== -1) {
+      text("importStatus", `⏳ '${file.name}' 파일을 정리하고 있습니다...`);
       scheduleAutoImport();
+    } else {
+      text(
+        "importStatus",
+        "⚠️ 아래 상세 설정에서 '본문'에 해당하는 열을 선택해 주세요.",
+      );
     }
   } catch (e) {
     table = null;
@@ -657,6 +648,11 @@ $("dataFile").onchange = async () => {
 $("attachments").onchange = () => {
   if (table && !busy) {
     scheduleAutoImport();
+  } else if ($("attachments").files.length) {
+    text(
+      "importStatus",
+      `📎 첨부파일 ${$("attachments").files.length}개가 선택되었습니다. 이제 왼쪽 '필수 1'에서 게시물 파일을 선택하세요!`,
+    );
   }
 };
 
@@ -680,29 +676,9 @@ async function executeLocalImport() {
       Object.keys(fields).map((f) => [f, Number($("map-" + f).value)]),
     );
     const next = normalize(table, Number($("sheet").value), map, nextAssets);
-    assets = nextAssets;
     remoteUrls = new Map();
-    approvedHosts = new Map();
-    project = next;
-    active = project.posts[0]?.id;
-    quickFilter = "all";
-    $("confirmSave").checked = true;
-    text("saveResult", "새 자료 가져옴 · 실제 저장 확인 0개");
-    $("sectionFilter").replaceChildren(node("option", "📂 모든 섹션"));
-    $("sectionFilter").firstChild.value = "";
-    for (const s of project.sections) {
-      const o = node("option", s.name || "섹션 없음");
-      o.value = s.id;
-      $("sectionFilter").append(o);
-    }
-    document.body.classList.add("has-project");
-    if ($("resetProjectBtn")) $("resetProjectBtn").hidden = false;
-    if ($("resetWorkspaceBtn")) $("resetWorkspaceBtn").hidden = false;
-    render();
-    text(
-      "importStatus",
-      `파일 읽기 완료 · 로컬 가져오기 완료 (게시물 ${next.posts.length}개 · 내보내기 파일 기준 · 전체 보드 수집 여부는 미확인입니다.)`,
-    );
+    installProject(next, nextAssets, false);
+    text("importStatus", "");
   } catch (e) {
     announce(e);
   } finally {
@@ -712,7 +688,7 @@ async function executeLocalImport() {
 
 $("importButton").onclick = executeLocalImport;
 
-// ③ ‘✨ 예시 수업 자료로 1초 체험하기’ 버튼 (#loadSampleBtn)
+// ‘✨ 예시 자료로 1초 체험하기’ 버튼 (#loadSampleBtn)
 const SAMPLE_PNG_BYTES = Uint8Array.from(
   atob(
     "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABLSURBVHhe7c6xCQAgDAVRR7H/pnbxEHCQ8JJv5s4c6Nba+wYICBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAgScGt7sB8W6N5nUAAAAASUVORK5CYII=",
@@ -795,16 +771,20 @@ if ($("loadSampleBtn")) {
     const next = normalize(sampleTable, 0, map, sampleAssets);
     remoteUrls = new Map();
     if ($("exportName")) $("exportName").value = "5학년1반_환경수업_예시";
-    installProject(next, sampleAssets);
-    text(
-      "importStatus",
-      "✨ 예시 수업 자료(게시물 3개 · 첨부파일 3개)를 불러왔습니다! 아래에서 카드를 눌러 미리보기·복사·ZIP 저장을 체험해 보세요.",
-    );
-    $("materials")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    installProject(next, sampleAssets, true);
   });
 }
 
-// ④ 전체 원문 / 전체 정리본 원클릭 복사 버튼
+// 전체 원문 / 전체 정리본 원클릭 복사 버튼
+if ($("quickCopyAll")) {
+  $("quickCopyAll").addEventListener("click", () => {
+    copyTextWithFeedback(
+      $("organized")?.textContent || "",
+      $("quickCopyAll"),
+      "📋 전체 글 한 번에 복사",
+    );
+  });
+}
 if ($("copyAllOriginal")) {
   $("copyAllOriginal").addEventListener("click", () => {
     copyTextWithFeedback(
@@ -827,7 +807,8 @@ if ($("copyAllOrganized")) {
 // Unified Drag & Drop Upload Box (#dropZone)
 const dropZone = $("dropZone");
 if (dropZone) {
-  dropZone.addEventListener("click", () => {
+  dropZone.addEventListener("click", (e) => {
+    if (e.target === $("dataFile")) return;
     if (!busy && !$("dataFile").disabled) $("dataFile").click();
   });
   dropZone.addEventListener("keydown", (e) => {
@@ -927,6 +908,20 @@ function render() {
     `${basis} · 가져옴 ${stats.postsObserved} · 선택 ${stats.postsSelected} · 본문 ${stats.textProcessed} · 첨부 참조 ${stats.attachmentReferences} · 서로 다른 확보 파일 ${stats.uniqueAssets} · 링크만 ${stats.externalLinks} · 미확보 ${stats.unresolved}`,
   );
 
+  // 상단 완료 배너 제목 업데이트
+  text(
+    "resultHeadline",
+    isSampleMode
+      ? `🎉 예시 게시물 ${stats.postsObserved}개와 첨부파일 ${stats.uniqueAssets}개가 준비되었습니다!`
+      : `🎉 총 ${stats.postsObserved}개의 게시물이 깔끔하게 정리되었습니다!`,
+  );
+  text(
+    "resultSubline",
+    isSampleMode
+      ? "오른쪽 [📦 ZIP 파일로 바로 다운로드]를 눌러보거나, 아래에서 글을 클릭해 확인해 보세요. 끝내려면 [🔄 다른 파일 올리기 (리셋)]를 누르세요."
+      : `저장할 게시물 ${stats.postsSelected}개 · 연결된 첨부파일 ${stats.uniqueAssets}개 · 오른쪽 버튼으로 지금 바로 다운로드하거나 글을 복사하세요.`,
+  );
+
   // Update 4 Summary Dashboard Metric Cards
   text("metricTotal", String(stats.postsObserved));
   text("metricSelected", String(stats.postsSelected));
@@ -943,12 +938,13 @@ function render() {
 
   const unlinkedList = assets
     .filter((f) => !project.attachments.some((a) => a.assetId === f.id))
-    .map((f) => f.input + " / " + f.path);
+    .map((f) => f.path);
   text(
     "unlinked",
     unlinkedList.length
-      ? "미연결 파일: " + unlinkedList.join(" · ")
-      : "미연결 파일: 없음",
+      ? "💡 아직 글에 연결되지 않은 추가 파일(ZIP 저장 시 함께 보관됨): " +
+          unlinkedList.join(", ")
+      : "",
   );
 
   $("posts").replaceChildren();
@@ -995,7 +991,8 @@ function render() {
       p.selected = c.checked;
       render();
     };
-    label.append(c, document.createTextNode(" " + p.id + " 포함"));
+    const authorTag = p.authorOriginal ? ` · ✍️ ${p.authorOriginal}` : "";
+    label.append(c, document.createTextNode(` 저장에 포함${authorTag}`));
 
     const b = node("button", p.titleOriginal || "[제목 없음]");
     b.type = "button";
@@ -1009,9 +1006,9 @@ function render() {
     const sectionName =
       project.sections.find((s) => s.id === p.sectionId)?.name || "섹션 없음";
     const attachStatus = hasUnresolved
-      ? `⚠️ 미확보 포함 (첨부 ${refs.length})`
+      ? `⚠️ 첨부 확인 필요 (${refs.length}개)`
       : refs.length
-        ? `📎 첨부 ${refs.length}`
+        ? `📎 첨부 ${refs.length}개`
         : "📄 글만 있음";
 
     card.append(
@@ -1060,10 +1057,12 @@ function renderDetail() {
   const sectionName =
     project.sections.find((s) => s.id === p.sectionId)?.name || "섹션 없음";
 
-  // Top meta & view toggle + one-click copy pill (using span[role=button] to preserve exact button/input selectors in #detail)
   const headBar = node("div");
   headBar.className = "detail-head-bar";
-  const badge = node("span", `📂 ${sectionName} · ${p.id}`);
+  const badge = node(
+    "span",
+    `📂 ${sectionName}${p.authorOriginal ? " · ✍️ " + p.authorOriginal : ""}`,
+  );
   badge.className = "detail-section-badge";
 
   const bodyText =
@@ -1073,12 +1072,12 @@ function renderDetail() {
 
   const viewSwitch = node("div");
   viewSwitch.className = "detail-view-switch";
-  const tabOrg = node("span", "✨ 정리본 보기");
+  const tabOrg = node("span", "✨ 깔끔한 정리본");
   tabOrg.className =
     "view-pill" + (detailViewMode === "organized" ? " active" : "");
   tabOrg.setAttribute("role", "button");
   tabOrg.tabIndex = 0;
-  const tabOrig = node("span", "📄 원문 보기");
+  const tabOrig = node("span", "📄 원문 그대로");
   tabOrig.className =
     "view-pill" + (detailViewMode === "original" ? " active" : "");
   tabOrig.setAttribute("role", "button");
@@ -1102,12 +1101,6 @@ function renderDetail() {
   viewSwitch.append(tabOrg, tabOrig, copyBtn);
   headBar.append(badge, viewSwitch);
 
-  const provenanceP = node(
-    "p",
-    `원문 위치: ${p.provenance.sourceFile} / ${p.provenance.sheet} / 행 ${p.provenance.row}`,
-  );
-  provenanceP.className = "detail-provenance";
-
   const warnP = node("p", p.warnings.join("\n"));
   warnP.className = "detail-warnings";
 
@@ -1115,12 +1108,11 @@ function renderDetail() {
     headBar,
     node("h3", p.titleOriginal || "[제목 없음]"),
     node("pre", bodyText),
-    provenanceP,
     warnP,
   );
 
   if (safeUrl(p.sourceUrl)) {
-    const a = node("a", "🔗 원문 링크 열기 (사용자 동작)");
+    const a = node("a", "🔗 패들렛 원문 링크 열기");
     a.className = "detail-source-link";
     a.href = safeUrl(p.sourceUrl);
     a.target = "_blank";
@@ -1134,7 +1126,7 @@ function renderDetail() {
   if (postAttachments.length) {
     const attachHeading = node(
       "h4",
-      `📎 연결된 첨부 자료 (${postAttachments.length}개)`,
+      `📎 첨부파일 (${postAttachments.length}개)`,
     );
     attachHeading.className = "detail-attach-heading";
     $("detail").append(attachHeading);
@@ -1153,40 +1145,7 @@ function renderDetail() {
       failP.className = "attach-failure";
       d.append(failP);
     }
-    if (a.originalStatus)
-      d.append(
-        node(
-          "p",
-          `첨부 유형: ${a.type} · 원본 주소/동일성 미검증${a.hasPreview ? " · 미리보기 있음 (요청·저장하지 않음)" : ""}${a.hasEmbed ? " · 임베드 있음 (실행하지 않음)" : ""}`,
-        ),
-      );
-    if (remoteUrls.has(a.id) && !a.assetId && a.status !== "linked_only") {
-      const candidate = remoteUrls.get(a.id);
-      const host = new URL(candidate).hostname;
-      const label = node("label"),
-        confirm = node("input");
-      confirm.type = "checkbox";
-      confirm.checked = approvedHosts.has(a.id);
-      confirm.setAttribute("aria-label", a.id + " 첨부 후보/호스트 선택");
-      try {
-        attachmentUrl(candidate, new Set([host]));
-      } catch {
-        confirm.disabled = true;
-      }
-      confirm.onchange = () => {
-        if (confirm.checked) approvedHosts.set(a.id, host);
-        else approvedHosts.delete(a.id);
-      };
-      label.append(
-        confirm,
-        document.createTextNode(
-          ` 원본 미확인 첨부 후보를 ${host}에서 요청하겠습니다${confirm.disabled ? " (현재 미지원 호스트/형식: 로컬 첨부 추가·수동 연결 필요)" : ""}`,
-        ),
-      );
-      d.append(label);
-    }
 
-    // ④ 안전한 래스터 이미지(.png, .jpg, .gif, .webp) 썸네일 미리보기
     if (a.assetId) {
       const matchedAsset = assets.find((f) => f.id === a.assetId);
       const imgMime =
@@ -1204,36 +1163,39 @@ function renderDetail() {
       }
     }
 
-    d.append(
-      node(
-        "p",
-        `${a.reference} · ${a.match.status} · ${a.assetId ? "바이트 확보 " + a.bytesReceived + " (아직 저장 확인 아님)" : a.status === "linked_only" ? "링크만 보관" : "미확보"}\n${a.match.evidence}`,
-      ),
-    );
-    const select = node("select");
-    select.setAttribute("aria-label", a.id + " 파일 수동 연결");
-    const none = node("option", "파일을 선택해 연결 확인");
-    none.value = "";
-    select.append(none);
-    for (const f of assets) {
-      const o = node("option", `${f.input} / ${f.path} (${f.bytes.length} B)`);
-      o.value = f.id;
-      select.append(o);
-    }
-    select.value = a.assetId || "";
-    select.onchange = () => {
-      a.assetId = select.value || null;
-      a.match = {
-        status: a.assetId ? "user_confirmed" : "unmatched",
-        evidence: "사용자 수동 연결",
+    const statusLabel = a.assetId
+      ? `✅ 연결 완료: ${a.reference}`
+      : a.status === "linked_only"
+        ? `🔗 외부 링크: ${a.reference}`
+        : `⚠️ 파일 확인 필요: ${a.reference} (아래에서 연결할 파일을 선택하세요)`;
+    d.append(node("p", statusLabel));
+
+    if (!a.assetId && assets.length > 0 && a.status !== "linked_only") {
+      const select = node("select");
+      select.setAttribute("aria-label", a.id + " 파일 수동 연결");
+      const none = node("option", "연결할 첨부파일 직접 선택...");
+      none.value = "";
+      select.append(none);
+      for (const f of assets) {
+        const o = node("option", `${f.path} (${f.bytes.length} B)`);
+        o.value = f.id;
+        select.append(o);
+      }
+      select.value = a.assetId || "";
+      select.onchange = () => {
+        a.assetId = select.value || null;
+        a.match = {
+          status: a.assetId ? "user_confirmed" : "unmatched",
+          evidence: "사용자 수동 연결",
+        };
+        a.bytesReceived =
+          assets.find((f) => f.id === a.assetId)?.bytes.length || 0;
+        a.status = a.assetId ? "discovered" : "manual_required";
+        if (a.assetId) a.failure = null;
+        render();
       };
-      a.bytesReceived =
-        assets.find((f) => f.id === a.assetId)?.bytes.length || 0;
-      a.status = a.assetId ? "discovered" : "manual_required";
-      if (a.assetId) a.failure = null;
-      render();
-    };
-    d.append(select);
+      d.append(select);
+    }
     $("detail").append(d);
   }
 }
@@ -1266,8 +1228,7 @@ function getExportBaseName() {
 
 function checkSave() {
   if (!project || !project.posts.some((p) => p.selected))
-    throw Error("먼저 게시물을 가져와 선택하세요.");
-  // ⑤ 저장 버튼 클릭 시 확인 체크박스가 해제되어 있어도 자동으로 체크 처리하여 번거로움 해소
+    throw Error("먼저 저장할 게시물을 하나 이상 체크해 주세요.");
   if ($("confirmSave") && !$("confirmSave").checked) {
     $("confirmSave").checked = true;
   }
@@ -1296,7 +1257,7 @@ $("saveZip").onclick = () => {
     setTimeout(() => URL.revokeObjectURL(url), 60000);
     text(
       "saveResult",
-      `ZIP 생성 완료 (${a.download}) · ${files.size}개 파일 포함 · ${bytes.length} 바이트\n다운로드 시작 · 디스크 저장 여부/위치는 브라우저에서 확인하세요.\n실제 폴더 저장 확인 0개 · 미확보 ${summary(project, assets).unresolved}개`,
+      `✅ '${a.download}' 다운로드가 시작되었습니다! (포함된 파일 ${files.size}개 · 브라우저 다운로드 폴더를 확인하세요)`,
     );
   } catch (e) {
     text("saveResult", e.message);
@@ -1311,7 +1272,7 @@ $("saveFolder").onclick = async () => {
   try {
     checkSave();
     const parent = await window.showDirectoryPicker({ mode: "readwrite" });
-    text("saveResult", "새 작업 폴더에 쓰는 중…");
+    text("saveResult", "⏳ 선택한 폴더 안에 새 정리 폴더를 만들고 있습니다…");
     const folderName = getExportBaseName() + "_" + Date.now();
     const result = await writeFolder(
       parent,
@@ -1322,13 +1283,13 @@ $("saveFolder").onclick = async () => {
     );
     text(
       "saveResult",
-      `선택 폴더: ${parent.name}\n새 작업 폴더: ${result.name}\n쓰기 종료 확인 ${result.records.filter((r) => r.status === "saved").length}개 · 실패 ${result.records.filter((r) => r.status === "failed").length}개 · 미확보 ${summary(project, assets).unresolved}개\n해시 검증은 수행하지 않았습니다.`,
+      `✅ '${parent.name}/${result.name}' 폴더에 파일 ${result.records.filter((r) => r.status === "saved").length}개를 저장했습니다!`,
     );
   } catch (e) {
     text(
       "saveResult",
       e.name === "AbortError"
-        ? "폴더 선택 취소 · 정리 자료는 유지됩니다. 다시 선택하거나 ZIP을 사용하세요."
+        ? "폴더 선택이 취소되었습니다. 다시 선택하거나 위의 [📦 ZIP 파일로 바로 다운로드]를 눌러주세요."
         : e.message,
     );
   } finally {
@@ -1337,7 +1298,7 @@ $("saveFolder").onclick = async () => {
 };
 
 window.addEventListener("beforeunload", (e) => {
-  if (project) {
+  if (project && !isSampleMode) {
     e.preventDefault();
     e.returnValue = "";
   }
