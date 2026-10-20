@@ -187,6 +187,9 @@ function resetProject() {
   if ($("attachments")) $("attachments").value = "";
   if ($("supplementalFiles")) $("supplementalFiles").value = "";
   if ($("exportName")) $("exportName").value = "";
+  text("dataFileLabel", "엑셀 · CSV 파일 찾아보기");
+  text("attachmentsLabel", "+ 첨부 ZIP · 파일 추가 (선택)");
+  if ($("triggerAttachments")) $("triggerAttachments").classList.remove("has-files");
   if ($("sheet")) {
     $("sheet").replaceChildren();
     $("sheet").disabled = true;
@@ -257,6 +260,8 @@ function setRemoteBusy(value) {
     "boardId",
     "apiKey",
     "attachments",
+    "triggerDataFile",
+    "triggerAttachments",
     "supplementalFiles",
     "addLocalAssets",
     "selectAll",
@@ -611,7 +616,11 @@ $("dataFile").onchange = async () => {
   if (busy) return;
   clearTimeout(autoImportTimer);
   const file = $("dataFile").files[0];
-  if (!file) return;
+  if (!file) {
+    text("dataFileLabel", "엑셀 · CSV 파일 찾아보기");
+    return;
+  }
+  text("dataFileLabel", `선택됨: ${file.name}`);
   setRemoteBusy(true);
   try {
     const next = await localTask("readTable", file, $("encoding").value);
@@ -646,12 +655,20 @@ $("dataFile").onchange = async () => {
 };
 
 $("attachments").onchange = () => {
+  const count = $("attachments").files.length;
+  if (count > 0) {
+    text("attachmentsLabel", `📎 첨부파일 ${count}개 선택됨 (변경 가능)`);
+    if ($("triggerAttachments")) $("triggerAttachments").classList.add("has-files");
+  } else {
+    text("attachmentsLabel", "+ 첨부 ZIP · 파일 추가 (선택)");
+    if ($("triggerAttachments")) $("triggerAttachments").classList.remove("has-files");
+  }
   if (table && !busy) {
     scheduleAutoImport();
-  } else if ($("attachments").files.length) {
+  } else if (count) {
     text(
       "importStatus",
-      `📎 첨부파일 ${$("attachments").files.length}개가 선택되었습니다. 이제 왼쪽 '필수 1'에서 게시물 파일을 선택하세요!`,
+      `📎 첨부파일 ${count}개가 선택되었습니다. 이제 왼쪽 'STEP 1 · 필수'에서 게시물 파일을 선택하세요!`,
     );
   }
 };
@@ -804,11 +821,53 @@ if ($("copyAllOrganized")) {
   });
 }
 
-// Unified Drag & Drop Upload Box (#dropZone)
+// Unified Drag & Drop Upload Box (#dropZone & #secondaryZone)
+if ($("triggerDataFile")) {
+  $("triggerDataFile").addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!busy && !$("dataFile").disabled) $("dataFile").click();
+  });
+}
+if ($("triggerAttachments")) {
+  $("triggerAttachments").addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!busy && !$("attachments").disabled) $("attachments").click();
+  });
+}
+
+const secondaryZone = $("secondaryZone");
+if (secondaryZone) {
+  secondaryZone.addEventListener("click", (e) => {
+    if (e.target === $("attachments") || e.target.closest("#triggerAttachments")) return;
+    if (!busy && !$("attachments").disabled) $("attachments").click();
+  });
+  for (const evt of ["dragenter", "dragover"]) {
+    secondaryZone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      if (!busy) secondaryZone.classList.add("drag-over");
+    });
+  }
+  for (const evt of ["dragleave", "drop"]) {
+    secondaryZone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      secondaryZone.classList.remove("drag-over");
+    });
+  }
+  secondaryZone.addEventListener("drop", (e) => {
+    if (busy || $("attachments").disabled) return;
+    const dropped = [...(e.dataTransfer?.files || [])];
+    if (!dropped.length) return;
+    const dt = new DataTransfer();
+    for (const f of dropped) dt.items.add(f);
+    $("attachments").files = dt.files;
+    $("attachments").onchange();
+  });
+}
+
 const dropZone = $("dropZone");
 if (dropZone) {
   dropZone.addEventListener("click", (e) => {
-    if (e.target === $("dataFile")) return;
+    if (e.target === $("dataFile") || e.target.closest("#triggerDataFile")) return;
     if (!busy && !$("dataFile").disabled) $("dataFile").click();
   });
   dropZone.addEventListener("keydown", (e) => {

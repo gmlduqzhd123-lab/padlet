@@ -28,7 +28,7 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png" />
-    <meta name="theme-color" content="#0f766e" />
+    <meta name="theme-color" content="#1e3a2f" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="패들렛 정리함" />
@@ -47,10 +47,14 @@
       <div class="topbar-inner">
         <div class="brand-group">
           <a class="brand" href="#import" id="brandHomeLink">
-            <span class="brand-mark" aria-hidden="true">🗂️</span>
+            <span class="brand-mark" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </span>
             <span class="brand-text">
               <strong>엽쌤의 패들렛 정리함</strong>
-              <small>패들렛 게시물·첨부파일 자동 정리 도구</small>
+              <small>패들렛 게시물·첨부파일 자동 아카이브</small>
             </span>
           </a>
           <span id="modeBadge" class="badge" hidden>로컬 가져오기</span>
@@ -65,56 +69,93 @@
 
         <div class="utility-key">
           <button type="button" id="resetProjectBtn" class="reset-btn" hidden>🔄 처음으로 (리셋)</button>
-          <button id="installApp" type="button" class="install-button">📲 <span class="install-wide">앱 </span>설치</button>
-          <button id="qrApp" type="button" class="install-button qr-button" aria-label="QR 코드로 접속">📱 QR</button>
+          <button id="installApp" type="button" class="install-button"><span class="install-wide">앱 </span>설치</button>
+          <button id="qrApp" type="button" class="install-button qr-button" aria-label="QR 코드로 접속">QR 접속</button>
         </div>
       </div>
     </header>
 
     <main>
       <!-- =========================================================
-           [화면 1] 시작 화면: 파일 업로드 카드 1개만 깔끔하게 표시
+           [화면 1] 시작 화면: 에디토리얼 아틀리에 (A-1 프리텐다드)
            ========================================================= -->
       <div id="startScreen" class="start-screen">
         <section id="import" class="card start-card">
-          <div class="start-hero">
-            <div class="start-hero-text">
-              <span class="step-pill">내 컴퓨터에서만 안전하게 처리</span>
-              <h1>패들렛 자료를 한 번에 정리하세요</h1>
-              <p>패들렛에서 내보낸 엑셀(XLSX)이나 CSV 파일을 선택하면 깔끔한 문서와 폴더(ZIP)로 즉시 정리해 드립니다.</p>
-            </div>
-            <button type="button" id="loadSampleBtn" class="sample-btn">✨ 예시 자료로 1초 체험하기</button>
+          <div class="start-hero-top">
+            <span class="step-pill">✦ 내 컴퓨터에서만 안전하게 처리</span>
+            <button type="button" id="loadSampleBtn" class="sample-btn">✦ 예시 자료로 1초 체험하기</button>
+          </div>
+
+          <div class="start-hero-body">
+            <h1>패들렛 자료를 한 권의 깔끔한 기록으로</h1>
+            <p>패들렛에서 내보낸 엑셀(XLSX)이나 CSV 파일을 올리면, 읽기 좋은 문서와<br class="desktop-br" />정리된 폴더(ZIP)로 즉시 만들어 드립니다.</p>
           </div>
 
           <!-- 패들렛 파일 내보내기 3초 한 줄 가이드 -->
           <div class="export-guide-bar" aria-label="패들렛 파일 내보내기 방법 안내">
-            <span class="guide-title">💡 패들렛에서 파일 받는 법</span>
+            <span class="guide-title">패들렛 파일 준비 방법</span>
             <div class="guide-steps">
-              <span class="guide-step"><b>1</b> 패들렛 우측 상단 <strong>[↗ 공유]</strong> 클릭</span>
+              <span class="guide-step"><b>1</b> 패들렛 우측 상단 <strong>[공유 ↗]</strong></span>
               <span class="guide-arrow" aria-hidden="true">→</span>
-              <span class="guide-step"><b>2</b> <strong>[내보내기(Export)]</strong> 선택</span>
+              <span class="guide-step"><b>2</b> <strong>[내보내기]</strong> 메뉴 선택</span>
               <span class="guide-arrow" aria-hidden="true">→</span>
               <span class="guide-step"><b>3</b> <strong>[엑셀(XLSX) 또는 CSV 저장]</strong></span>
             </div>
           </div>
 
-          <!-- 직관적인 2단계 업로드 박스 (중복 버튼 제거) -->
+          <!-- 직관적인 2단계 업로드 카드 -->
           <div class="upload-steps-grid">
             <div id="dropZone" class="upload-step-box primary-upload-box" tabindex="0" role="region" aria-label="게시물 파일 선택 또는 끌어다 놓기">
-              <div class="upload-step-badge">필수 1</div>
-              <div class="upload-step-body">
-                <strong>📄 패들렛 게시물 파일 올리기</strong>
-                <p>엑셀(<code>.xlsx</code>) 또는 <code>.csv</code> 파일을 선택하거나 여기에 끌어다 놓으세요. <b>선택 즉시 자동 정리됩니다.</b></p>
-                <input id="dataFile" type="file" accept=".csv,.xlsx,.json" aria-label="게시물 파일 선택" />
+              <div class="upload-card-top">
+                <div class="upload-card-head">
+                  <div class="upload-icon-box primary" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <line x1="12" y1="18" x2="12" y2="12"></line>
+                      <line x1="9" y1="15" x2="15" y2="15"></line>
+                    </svg>
+                  </div>
+                  <span class="upload-step-badge">STEP 1 · 필수</span>
+                </div>
+                <div class="upload-step-body">
+                  <strong>패들렛 게시물 파일 올리기</strong>
+                  <p>내보낸 엑셀(<code>.xlsx</code>) 또는 CSV(<code>.csv</code>) 파일을 끌어다 놓거나 아래 버튼을 눌러 선택하세요. 선택 즉시 자동 정리됩니다.</p>
+                </div>
+              </div>
+              <div class="upload-card-action">
+                <button type="button" id="triggerDataFile" class="upload-trigger-btn primary">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  <span id="dataFileLabel">엑셀 · CSV 파일 찾아보기</span>
+                </button>
+                <input id="dataFile" class="sr-only" type="file" accept=".csv,.xlsx,.json" aria-label="게시물 파일 선택" />
               </div>
             </div>
 
-            <div class="upload-step-box secondary-upload-box">
-              <div class="upload-step-badge optional">선택 2</div>
-              <div class="upload-step-body">
-                <strong>📎 첨부파일이 있다면 함께 올리기</strong>
-                <p>사진·문서 첨부파일(ZIP 또는 개별 파일)이 있을 때만 선택하세요. 글만 정리할 땐 비워두셔도 됩니다.</p>
-                <input id="attachments" type="file" multiple aria-label="첨부 ZIP 또는 개별 파일 선택" />
+            <div id="secondaryZone" class="upload-step-box secondary-upload-box">
+              <div class="upload-card-top">
+                <div class="upload-card-head">
+                  <div class="upload-icon-box secondary" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                    </svg>
+                  </div>
+                  <span class="upload-step-badge optional">STEP 2 · 선택</span>
+                </div>
+                <div class="upload-step-body">
+                  <strong>첨부파일 함께 올리기</strong>
+                  <p>사진·문서 첨부파일(ZIP 또는 개별 파일)이 있을 때만 추가하세요. 글만 정리할 땐 비워두셔도 됩니다.</p>
+                </div>
+              </div>
+              <div class="upload-card-action">
+                <button type="button" id="triggerAttachments" class="upload-trigger-btn secondary">
+                  <span id="attachmentsLabel">+ 첨부 ZIP · 파일 추가 (선택)</span>
+                </button>
+                <input id="attachments" class="sr-only" type="file" multiple aria-label="첨부 ZIP 또는 개별 파일 선택" />
               </div>
             </div>
           </div>
@@ -123,7 +164,10 @@
 
           <!-- 글자 깨짐·엑셀 시트·열 매핑은 문제가 있을 때만 여는 작은 접이식 메뉴로 숨김 -->
           <details id="importOptions" class="compact-details">
-            <summary>⚙️ 한글이 깨지거나 시트·열을 직접 지정해야 할 때만 여세요</summary>
+            <summary>
+              <span>⚙️ 한글이 깨지거나 엑셀 시트·열을 직접 지정해야 할 때만 여세요</span>
+              <span class="summary-chevron" aria-hidden="true">펼치기 ▾</span>
+            </summary>
             <div class="options-row">
               <label for="encoding">CSV 인코딩
                 <select id="encoding">
@@ -177,14 +221,14 @@
         <section id="save" class="card result-action-banner">
           <div class="result-banner-top">
             <div class="result-banner-title">
-              <span id="sampleModePill" class="step-pill sample-pill" hidden>✨ 예시 체험 모드</span>
+              <span id="sampleModePill" class="step-pill sample-pill" hidden>✦ 예시 체험 모드</span>
               <h2 id="resultHeadline">🎉 자료 정리가 완료되었습니다!</h2>
               <p id="resultSubline">아래에서 정리된 글을 확인하거나, 오른쪽 버튼으로 지금 바로 저장·복사하세요.</p>
             </div>
 
             <div class="result-quick-controls">
               <div class="export-name-inline">
-                <label for="exportName">🏷️ 저장 파일 이름</label>
+                <label for="exportName">저장 파일 이름</label>
                 <input id="exportName" type="text" placeholder="예: 5학년1반_독서기록장" />
               </div>
               <div class="result-main-buttons">
@@ -200,7 +244,10 @@
 
           <!-- 호환성 및 폴더 직접 저장 옵션 (접이식) -->
           <details class="compact-details folder-save-details">
-            <summary>📁 ZIP 대신 내 컴퓨터 폴더에 직접 저장하거나 추가 파일을 넣으려면 여세요</summary>
+            <summary>
+              <span>📁 ZIP 대신 내 컴퓨터 폴더에 직접 저장하거나 추가 파일을 넣으려면 여세요</span>
+              <span class="summary-chevron" aria-hidden="true">펼치기 ▾</span>
+            </summary>
             <div class="folder-save-inner">
               <div class="folder-save-group">
                 <button id="saveFolder" class="secondary sm-btn" type="button">📁 폴더 선택 · 새 작업 폴더에 바로 저장</button>
@@ -295,7 +342,10 @@
 
         <!-- 전체 글 모아보기 비교는 필요할 때만 펼쳐보는 하단 접이식 메뉴로 정리 -->
         <details class="card advanced-organize-drawer">
-          <summary>📄 모든 게시물 한꺼번에 모아보기 · 작성자/작성일 표시 설정</summary>
+          <summary>
+            <span>📄 모든 게시물 한꺼번에 모아보기 · 작성자/작성일 표시 설정</span>
+            <span class="summary-chevron" aria-hidden="true">펼치기 ▾</span>
+          </summary>
           <section id="organize" class="organize-section-inner">
             <div class="section-header-bar">
               <p class="muted">체크한 모든 게시물을 하나의 문서로 합친 결과입니다.</p>
