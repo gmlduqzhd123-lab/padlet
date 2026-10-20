@@ -172,8 +172,68 @@ function installProject(next, nextAssets = []) {
   $("typeFilter").value = "";
   text("saveResult", "새 자료 가져옴 · 실제 저장 확인 0개");
   document.body.classList.add("has-project");
+  if ($("resetProjectBtn")) $("resetProjectBtn").hidden = false;
+  if ($("resetWorkspaceBtn")) $("resetWorkspaceBtn").hidden = false;
   render();
 }
+
+function resetProject() {
+  if (busy) return;
+  clearTimeout(autoImportTimer);
+  clearDetailBlobs();
+  table = null;
+  project = null;
+  assets = [];
+  active = null;
+  quickFilter = "all";
+  remoteUrls = new Map();
+  approvedHosts = new Map();
+  document.body.classList.remove("has-project");
+  if ($("resetProjectBtn")) $("resetProjectBtn").hidden = true;
+  if ($("resetWorkspaceBtn")) $("resetWorkspaceBtn").hidden = true;
+  if ($("dataFile")) $("dataFile").value = "";
+  if ($("attachments")) $("attachments").value = "";
+  if ($("supplementalFiles")) $("supplementalFiles").value = "";
+  if ($("exportName")) $("exportName").value = "";
+  if ($("sheet")) {
+    $("sheet").replaceChildren();
+    $("sheet").disabled = true;
+  }
+  if ($("mapping")) $("mapping").replaceChildren();
+  if ($("importOptions")) $("importOptions").open = false;
+  if ($("importButton")) $("importButton").disabled = true;
+  text("importStatus", "초기화되었습니다. 새 파일을 선택하거나 예시 체험하기를 눌러보세요.");
+  text("modeBadge", "로컬 가져오기");
+  text("metricTotal", "0");
+  text("metricSelected", "0");
+  text("metricAssets", "0");
+  text("metricUnresolved", "0");
+  text("stats", "내보내기 파일 기준 · 아직 가져온 자료가 없습니다.");
+  text("coverage", "");
+  text("unlinked", "");
+  text("original", "");
+  text("organized", "");
+  text("saveResult", "실제 저장 확인 0개 · ZIP 생성 0개");
+  $("sectionFilter").replaceChildren(node("option", "📂 모든 섹션"));
+  $("sectionFilter").firstChild.value = "";
+  $("search").value = "";
+  $("typeFilter").value = "";
+  const emptyPostP = node("p");
+  emptyPostP.className = "empty-state";
+  emptyPostP.textContent =
+    "아직 모아 둔 자료가 없습니다. 위에서 게시물 파일(CSV·XLSX)과 첨부 ZIP을 선택하거나 [✨ 예시 수업 자료로 1초 체험하기]를 눌러보세요.";
+  $("posts").replaceChildren(emptyPostP);
+  const emptyDetailP = node(
+    "p",
+    "👈 왼쪽 목록에서 게시물을 클릭하면 정리본·원문 비교, 글 복사, 첨부 이미지 미리보기를 한눈에 볼 수 있습니다.",
+  );
+  emptyDetailP.className = "empty-detail";
+  $("detail").replaceChildren(emptyDetailP);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+if ($("resetProjectBtn")) $("resetProjectBtn").onclick = resetProject;
+if ($("resetWorkspaceBtn")) $("resetWorkspaceBtn").onclick = resetProject;
 
 function apiProgress(progress) {
   if (progress.phase === "waiting")
@@ -636,6 +696,8 @@ async function executeLocalImport() {
       $("sectionFilter").append(o);
     }
     document.body.classList.add("has-project");
+    if ($("resetProjectBtn")) $("resetProjectBtn").hidden = false;
+    if ($("resetWorkspaceBtn")) $("resetWorkspaceBtn").hidden = false;
     render();
     text(
       "importStatus",
