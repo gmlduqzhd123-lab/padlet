@@ -277,6 +277,80 @@ main {
   color: var(--text-muted);
 }
 
+.intro-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sample-btn {
+  margin: 0;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--accent);
+  border: 1.5px solid var(--accent);
+  font-size: 13.5px;
+  font-weight: 800;
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
+}
+
+.sample-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* 패들렛 파일 내보내기 3초 한 줄 가이드 */
+.export-guide-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+}
+
+.guide-title {
+  font-weight: 800;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.guide-steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: var(--text-muted);
+}
+
+.guide-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.guide-step b {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.guide-arrow {
+  color: var(--border-strong);
+  font-weight: 700;
+}
+
 .route-links {
   display: flex;
   align-items: center;
@@ -1070,6 +1144,27 @@ p:empty {
   box-shadow: var(--shadow-sm);
 }
 
+.copy-pill {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.copy-pill:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.attach-thumb {
+  display: block;
+  max-width: 180px;
+  max-height: 140px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin: 6px 0 8px;
+  object-fit: cover;
+  background: var(--surface);
+}
+
 #detail h3 {
   font-size: 19px;
   font-weight: 800;
@@ -1170,10 +1265,22 @@ p:empty {
   cursor: pointer;
 }
 
+.compare-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.compare-head button {
+  margin: 0;
+}
+
 .compare-box h3 {
   font-size: 14px;
   color: var(--text-muted);
-  margin: 0 0 6px;
+  margin: 0;
 }
 
 .compare-box pre {
@@ -1209,6 +1316,22 @@ p:empty {
 .save-info p {
   margin: 4px 0 10px;
   font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+.export-name-row {
+  max-width: 480px;
+  margin: 8px 0 10px;
+}
+
+.export-name-row label {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.export-name-row label small {
+  font-weight: 500;
   color: var(--text-muted);
 }
 
@@ -1415,6 +1538,10 @@ footer .copyright {
   }
   .intro-copy h1 {
     font-size: 17.5px;
+  }
+  .intro-actions,
+  .sample-btn {
+    width: 100%;
   }
   .route-links {
     width: 100%;

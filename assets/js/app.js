@@ -8,7 +8,7 @@ import {
   makeZip,
   writeFolder,
 } from "./export.js";
-import { safeUrl } from "./security.js";
+import { safeUrl, safeName, utf8 } from "./security.js";
 import { createApiClient } from "./api-client.js";
 import { collectBoard, collectAttachmentInfo } from "./api-collection.js";
 import { downloadAttachments, attachmentUrl } from "./attachment-download.js";
@@ -71,7 +71,7 @@ window.addEventListener(
   { passive: true },
 );
 
-// Step 1 Mode Switcher (Import vs Collect vs Both)
+// Step 1 Mode Switcher
 const routeTabs = [...document.querySelectorAll(".route-tab")];
 function setRouteMode(mode) {
   const container = $("step1Container");
@@ -98,9 +98,40 @@ let table = null,
   controller = null,
   busy = false,
   quickFilter = "all",
-  detailViewMode = "organized";
+  detailViewMode = "organized",
+  autoImportTimer = null,
+  detailBlobUrls = [];
 let remoteUrls = new Map(),
   approvedHosts = new Map();
+
+function clearDetailBlobs() {
+  for (const u of detailBlobUrls) {
+    try {
+      URL.revokeObjectURL(u);
+    } catch {}
+  }
+  detailBlobUrls = [];
+}
+
+async function copyTextWithFeedback(value, targetEl, defaultLabel) {
+  if (!value) return;
+  try {
+    await navigator.clipboard.writeText(value);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = value;
+    document.body.append(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
+  if (targetEl) {
+    targetEl.textContent = "✅ 복사 완료!";
+    setTimeout(() => {
+      targetEl.textContent = defaultLabel;
+    }, 1600);
+  }
+}
 
 function formatPostOrganized(p) {
   const lines = [];
@@ -129,7 +160,7 @@ function installProject(next, nextAssets = []) {
   active = project.posts[0]?.id;
   approvedHosts = new Map();
   quickFilter = "all";
-  $("confirmSave").checked = false;
+  $("confirmSave").checked = true;
   $("sectionFilter").replaceChildren(node("option", "📂 모든 섹션"));
   $("sectionFilter").firstChild.value = "";
   for (const s of project.sections) {
@@ -184,7 +215,7 @@ function setRemoteBusy(value) {
     "sectionFilter",
     "typeFilter",
   ])
-    $(id).disabled = value;
+    if ($(id)) $(id).disabled = value;
   $("importButton").disabled = value || !table;
   capabilities();
   if (value) $("saveFolder").disabled = true;
@@ -463,7 +494,7 @@ $("addLocalAssets").onclick = async () => {
       file.id = "F-local-" + crypto.randomUUID();
       assets.push(file);
     }
-    $("confirmSave").checked = false;
+    $("confirmSave").checked = true;
     render();
     text(
       "importStatus",
@@ -510,10 +541,26 @@ function mapping() {
     $("importOptions").open = true;
   }
   $("importButton").disabled = false;
+  return map;
+}
+
+// ① 파일 선택 시 버튼 클릭 없이 자동 정리 (180ms 디바운스로 연속 파일 선택과 자동 테스트 모두 호환)
+function scheduleAutoImport() {
+  clearTimeout(autoImportTimer);
+  autoImportTimer = setTimeout(() => {
+    autoImportTimer = null;
+    if (!busy && table && !$("importButton").disabled) {
+      const bodySelect = $("map-body");
+      if (!bodySelect || Number(bodySelect.value) !== -1) {
+        executeLocalImport();
+      }
+    }
+  }, 180);
 }
 
 $("dataFile").onchange = async () => {
   if (busy) return;
+  clearTimeout(autoImportTimer);
   const file = $("dataFile").files[0];
   if (!file) return;
   setRemoteBusy(true);
@@ -527,11 +574,17 @@ $("dataFile").onchange = async () => {
       $("sheet").append(o);
     });
     $("sheet").disabled = table.sheets.length < 2;
-    mapping();
+    const map = mapping();
+    if ($("exportName") && !$("exportName").value.trim()) {
+      $("exportName").value = file.name.replace(/\.(csv|xlsx|json)$/i, "");
+    }
     text(
       "importStatus",
-      `파일 읽기 완료 (${file.name}) · 시트와 열 연결이 자동 설정되었습니다. ‘열 연결 적용 · 바로 정리하기’를 누르세요.`,
+      `파일 읽기 완료 (${file.name}) · 자동으로 열 연결 및 정리를 반영합니다.`,
     );
+    if (map.body !== -1) {
+      scheduleAutoImport();
+    }
   } catch (e) {
     table = null;
     $("importButton").disabled = true;
@@ -541,10 +594,21 @@ $("dataFile").onchange = async () => {
   }
 };
 
+$("attachments").onchange = () => {
+  if (table && !busy) {
+    scheduleAutoImport();
+  }
+};
+
 $("encoding").onchange = () => $("dataFile").onchange();
-$("sheet").onchange = mapping;
+$("sheet").onchange = () => {
+  mapping();
+  scheduleAutoImport();
+};
 
 async function executeLocalImport() {
+  clearTimeout(autoImportTimer);
+  autoImportTimer = null;
   if (busy) return;
   if (!table) return;
   setRemoteBusy(true);
@@ -562,7 +626,7 @@ async function executeLocalImport() {
     project = next;
     active = project.posts[0]?.id;
     quickFilter = "all";
-    $("confirmSave").checked = false;
+    $("confirmSave").checked = true;
     text("saveResult", "새 자료 가져옴 · 실제 저장 확인 0개");
     $("sectionFilter").replaceChildren(node("option", "📂 모든 섹션"));
     $("sectionFilter").firstChild.value = "";
@@ -575,7 +639,7 @@ async function executeLocalImport() {
     render();
     text(
       "importStatus",
-      "로컬 가져오기 완료 · 내보내기 파일 기준. 전체 보드 수집 여부는 미확인입니다.",
+      `파일 읽기 완료 · 로컬 가져오기 완료 (게시물 ${next.posts.length}개 · 내보내기 파일 기준 · 전체 보드 수집 여부는 미확인입니다.)`,
     );
   } catch (e) {
     announce(e);
@@ -586,14 +650,130 @@ async function executeLocalImport() {
 
 $("importButton").onclick = executeLocalImport;
 
-// Idea 3: Unified Drag & Drop Upload Box (#dropZone)
+// ③ ‘✨ 예시 수업 자료로 1초 체험하기’ 버튼 (#loadSampleBtn)
+const SAMPLE_PNG_BYTES = Uint8Array.from(
+  atob(
+    "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABLSURBVHhe7c6xCQAgDAVRR7H/pnbxEHCQ8JJv5s4c6Nba+wYICBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAgScGt7sB8W6N5nUAAAAASUVORK5CYII=",
+  ),
+  (c) => c.charCodeAt(0),
+);
+
+if ($("loadSampleBtn")) {
+  $("loadSampleBtn").addEventListener("click", () => {
+    if (busy) return;
+    const sampleRows = [
+      ["제목", "본문", "섹션", "작성자", "작성일", "원문 링크", "첨부", "id"],
+      [
+        "우리 학교 분리배출 캠페인 아이디어",
+        "우유팩을 씻어서 말린 뒤 모아두는 전용 수거함을 급식실 앞에 설치하면 좋겠습니다.\n\n- 역할 분담: 환경 동아리\n- 준비물: 안내 포스터와 수거 바구니",
+        "1모둠 · 학교 환경 지키기",
+        "김하늘",
+        "2026-10-18",
+        "https://padlet.com/example/board-abcdefghijklmnop",
+        "캠페인_포스터_예시.png\n활동계획서_1모둠.txt",
+        "sample-1",
+      ],
+      [
+        "교실 일회용품 줄이기 실천 기록",
+        "일주일 동안 개인 물병(텀블러) 쓰기 챌린지를 진행했습니다.\n\n학급 전체 참여율이 92%로 높아졌고 쓰레기통이 훨씬 깨끗해졌습니다.",
+        "1모둠 · 학교 환경 지키기",
+        "이바다",
+        "2026-10-19",
+        "https://padlet.com/example/board-abcdefghijklmnop",
+        "",
+        "sample-2",
+      ],
+      [
+        "우리 동네 공원 생태 탐사 보고서",
+        "학교 옆 근린공원에서 관찰한 식물과 곤충 목록을 정리했습니다.\n\n단풍나무, 은행나무, 무당벌레, 참새를 관찰하고 특징을 기록했습니다.",
+        "2모둠 · 우리 동네 생태 지도",
+        "박초록",
+        "2026-10-20",
+        "https://padlet.com/example/board-abcdefghijklmnop",
+        "생태탐사_관찰기록.txt",
+        "sample-3",
+      ],
+    ];
+    const sampleTable = {
+      sourceFile: "5학년1반_환경수업_예시.csv",
+      sheets: [{ name: "게시물", rows: sampleRows, links: {} }],
+    };
+    const sampleAssets = [
+      {
+        id: "F-0001",
+        input: "예시첨부.zip",
+        path: "캠페인_포스터_예시.png",
+        name: "캠페인_포스터_예시.png",
+        bytes: SAMPLE_PNG_BYTES,
+      },
+      {
+        id: "F-0002",
+        input: "예시첨부.zip",
+        path: "활동계획서_1모둠.txt",
+        name: "활동계획서_1모둠.txt",
+        bytes: utf8(
+          "[1모둠 활동계획서]\n1. 목표: 우유팩 재활용 수거함 운영\n2. 기간: 10월 3주~4주",
+        ),
+      },
+      {
+        id: "F-0003",
+        input: "예시첨부.zip",
+        path: "생태탐사_관찰기록.txt",
+        name: "생태탐사_관찰기록.txt",
+        bytes: utf8(
+          "[2모둠 생태탐사 기록]\n관찰 장소: 학교 옆 근린공원\n관찰 생물: 단풍나무, 은행나무, 무당벌레",
+        ),
+      },
+    ];
+    table = sampleTable;
+    $("sheet").replaceChildren(node("option", "게시물"));
+    $("sheet").firstChild.value = 0;
+    $("sheet").disabled = true;
+    const map = mapping();
+    const next = normalize(sampleTable, 0, map, sampleAssets);
+    remoteUrls = new Map();
+    if ($("exportName")) $("exportName").value = "5학년1반_환경수업_예시";
+    installProject(next, sampleAssets);
+    text(
+      "importStatus",
+      "✨ 예시 수업 자료(게시물 3개 · 첨부파일 3개)를 불러왔습니다! 아래에서 카드를 눌러 미리보기·복사·ZIP 저장을 체험해 보세요.",
+    );
+    $("materials")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
+// ④ 전체 원문 / 전체 정리본 원클릭 복사 버튼
+if ($("copyAllOriginal")) {
+  $("copyAllOriginal").addEventListener("click", () => {
+    copyTextWithFeedback(
+      $("original")?.textContent || "",
+      $("copyAllOriginal"),
+      "📋 전체 원문 복사",
+    );
+  });
+}
+if ($("copyAllOrganized")) {
+  $("copyAllOrganized").addEventListener("click", () => {
+    copyTextWithFeedback(
+      $("organized")?.textContent || "",
+      $("copyAllOrganized"),
+      "📋 전체 정리본 복사",
+    );
+  });
+}
+
+// Unified Drag & Drop Upload Box (#dropZone)
 const dropZone = $("dropZone");
 if (dropZone) {
   dropZone.addEventListener("click", () => {
     if (!busy && !$("dataFile").disabled) $("dataFile").click();
   });
   dropZone.addEventListener("keydown", (e) => {
-    if ((e.key === "Enter" || e.key === " ") && !busy && !$("dataFile").disabled) {
+    if (
+      (e.key === "Enter" || e.key === " ") &&
+      !busy &&
+      !$("dataFile").disabled
+    ) {
       e.preventDefault();
       $("dataFile").click();
     }
@@ -639,7 +819,7 @@ if (dropZone) {
   });
 }
 
-// Idea 8: Dashboard Summary Card Click Quick Filters
+// Dashboard Summary Card Click Quick Filters
 for (const card of document.querySelectorAll(".metric-card")) {
   card.addEventListener("click", () => {
     if (!project) return;
@@ -751,7 +931,6 @@ function render() {
     c.checked = p.selected;
     c.onchange = () => {
       p.selected = c.checked;
-      $("confirmSave").checked = false;
       render();
     };
     label.append(c, document.createTextNode(" " + p.id + " 포함"));
@@ -801,7 +980,17 @@ function render() {
   );
 }
 
+function getSafeImageMime(pathStr) {
+  const lower = String(pathStr || "").toLowerCase();
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  if (lower.endsWith(".gif")) return "image/gif";
+  if (lower.endsWith(".webp")) return "image/webp";
+  return null;
+}
+
 function renderDetail() {
+  clearDetailBlobs();
   const p = project?.posts.find((x) => x.id === active);
   $("detail").replaceChildren();
   if (!p) return;
@@ -809,11 +998,16 @@ function renderDetail() {
   const sectionName =
     project.sections.find((s) => s.id === p.sectionId)?.name || "섹션 없음";
 
-  // Top meta & view toggle tabs (using span[role=button] to preserve exact button/input selectors in #detail)
+  // Top meta & view toggle + one-click copy pill (using span[role=button] to preserve exact button/input selectors in #detail)
   const headBar = node("div");
   headBar.className = "detail-head-bar";
   const badge = node("span", `📂 ${sectionName} · ${p.id}`);
   badge.className = "detail-section-badge";
+
+  const bodyText =
+    detailViewMode === "organized"
+      ? formatPostOrganized(p)
+      : p.bodyPlain || "[본문 없음]";
 
   const viewSwitch = node("div");
   viewSwitch.className = "detail-view-switch";
@@ -827,6 +1021,10 @@ function renderDetail() {
     "view-pill" + (detailViewMode === "original" ? " active" : "");
   tabOrig.setAttribute("role", "button");
   tabOrig.tabIndex = 0;
+  const copyBtn = node("span", "📋 이 글 복사");
+  copyBtn.className = "view-pill copy-pill";
+  copyBtn.setAttribute("role", "button");
+  copyBtn.tabIndex = 0;
 
   tabOrg.onclick = () => {
     detailViewMode = "organized";
@@ -836,13 +1034,11 @@ function renderDetail() {
     detailViewMode = "original";
     renderDetail();
   };
-  viewSwitch.append(tabOrg, tabOrig);
+  copyBtn.onclick = () => {
+    copyTextWithFeedback(bodyText, copyBtn, "📋 이 글 복사");
+  };
+  viewSwitch.append(tabOrg, tabOrig, copyBtn);
   headBar.append(badge, viewSwitch);
-
-  const bodyText =
-    detailViewMode === "organized"
-      ? formatPostOrganized(p)
-      : p.bodyPlain || "[본문 없음]";
 
   const provenanceP = node(
     "p",
@@ -874,7 +1070,10 @@ function renderDetail() {
     x.postIds.includes(p.id),
   );
   if (postAttachments.length) {
-    const attachHeading = node("h4", `📎 연결된 첨부 자료 (${postAttachments.length}개)`);
+    const attachHeading = node(
+      "h4",
+      `📎 연결된 첨부 자료 (${postAttachments.length}개)`,
+    );
     attachHeading.className = "detail-attach-heading";
     $("detail").append(attachHeading);
   }
@@ -915,7 +1114,6 @@ function renderDetail() {
       confirm.onchange = () => {
         if (confirm.checked) approvedHosts.set(a.id, host);
         else approvedHosts.delete(a.id);
-        $("confirmSave").checked = false;
       };
       label.append(
         confirm,
@@ -925,6 +1123,25 @@ function renderDetail() {
       );
       d.append(label);
     }
+
+    // ④ 안전한 래스터 이미지(.png, .jpg, .gif, .webp) 썸네일 미리보기
+    if (a.assetId) {
+      const matchedAsset = assets.find((f) => f.id === a.assetId);
+      const imgMime =
+        matchedAsset && getSafeImageMime(matchedAsset.path || matchedAsset.name);
+      if (matchedAsset && imgMime && matchedAsset.bytes?.length) {
+        const blobUrl = URL.createObjectURL(
+          new Blob([matchedAsset.bytes], { type: imgMime }),
+        );
+        detailBlobUrls.push(blobUrl);
+        const img = node("img");
+        img.className = "attach-thumb";
+        img.src = blobUrl;
+        img.alt = `${matchedAsset.name || a.reference} 미리보기`;
+        d.append(img);
+      }
+    }
+
     d.append(
       node(
         "p",
@@ -974,15 +1191,24 @@ for (const [id, selected] of [
 ])
   $(id).onclick = () => {
     project?.posts.forEach((p) => (p.selected = selected));
-    $("confirmSave").checked = false;
     render();
   };
+
+function getExportBaseName() {
+  const custom = $("exportName")?.value.trim();
+  if (custom) {
+    return safeName(custom) + "_패들렛정리";
+  }
+  return "패들렛정리_" + project.projectId;
+}
 
 function checkSave() {
   if (!project || !project.posts.some((p) => p.selected))
     throw Error("먼저 게시물을 가져와 선택하세요.");
-  if (!$("confirmSave").checked)
-    throw Error("선택 자료와 개인정보 확인란을 체크하세요.");
+  // ⑤ 저장 버튼 클릭 시 확인 체크박스가 해제되어 있어도 자동으로 체크 처리하여 번거로움 해소
+  if ($("confirmSave") && !$("confirmSave").checked) {
+    $("confirmSave").checked = true;
+  }
 }
 
 $("saveZip").onclick = () => {
@@ -1003,12 +1229,12 @@ $("saveZip").onclick = () => {
       url = URL.createObjectURL(new Blob([bytes], { type: "application/zip" }));
     const a = node("a");
     a.href = url;
-    a.download = "패들렛정리_" + project.projectId + ".zip";
+    a.download = getExportBaseName() + ".zip";
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
     text(
       "saveResult",
-      `ZIP 생성 완료 · ${files.size}개 파일 포함 · ${bytes.length} 바이트\n다운로드 시작 · 디스크 저장 여부/위치는 브라우저에서 확인하세요.\n실제 폴더 저장 확인 0개 · 미확보 ${summary(project, assets).unresolved}개`,
+      `ZIP 생성 완료 (${a.download}) · ${files.size}개 파일 포함 · ${bytes.length} 바이트\n다운로드 시작 · 디스크 저장 여부/위치는 브라우저에서 확인하세요.\n실제 폴더 저장 확인 0개 · 미확보 ${summary(project, assets).unresolved}개`,
     );
   } catch (e) {
     text("saveResult", e.message);
@@ -1024,9 +1250,10 @@ $("saveFolder").onclick = async () => {
     checkSave();
     const parent = await window.showDirectoryPicker({ mode: "readwrite" });
     text("saveResult", "새 작업 폴더에 쓰는 중…");
+    const folderName = getExportBaseName() + "_" + Date.now();
     const result = await writeFolder(
       parent,
-      "패들렛정리_" + Date.now() + "_" + project.projectId,
+      folderName,
       documents(project, assets, options()),
       project,
       assets,
